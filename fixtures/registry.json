@@ -1,0 +1,37 @@
+{
+  "version": "0.15.3",
+  "fingerprint": "782e3008ee346e246736962c4ea0ab25038c1930f9f43dd77ac35187217ca459",
+  "lookups": [
+    ["geo", "geo"],
+    ["GEO", "geo"],
+    ["Geo", "geo"],
+    ["pubmed", "pubmed"],
+    ["PUBMED", "pubmed"],
+    ["PMID", "pubmed"],
+    ["pmid", "pubmed"],
+    ["PmId", "pubmed"],
+    ["PubMed ID", "pubmed"],
+    ["hgnc.symbol", "hgnc.symbol"],
+    ["ChEBI", "chebi"],
+    ["openalex.topic", "openalex.topic"],
+    ["OpenAlex.Topic", "openalex.topic"],
+    ["figshare", "figshare"],
+    ["FIGSHARE", "figshare"],
+    ["nope", null],
+    ["", null],
+    [" geo", null]
+  ],
+  "collisions": [
+    {"schemes": [], "expected": []},
+    {"schemes": [{"prefix": "lit.x", "issued_by": "lit"}], "expected": []},
+    {"schemes": [{"prefix": "geo"}], "expected": [["geo", "shadows_registry"]]},
+    {"schemes": [{"prefix": "GEO"}], "expected": [["GEO", "shadows_registry"]]},
+    {"schemes": [{"prefix": "pmid"}], "expected": [["pmid", "shadows_registry"]]},
+    {"schemes": [{"prefix": "PubMed ID"}], "expected": [["PubMed ID", "shadows_registry"]]},
+    {"schemes": [{"prefix": "lit.x", "issued_by": "lit"}, {"prefix": "lit.x", "issued_by": "lit"}], "expected": [["lit.x", "repeated"]]},
+    {"schemes": [{"prefix": "lit.x", "issued_by": "lit"}, {"prefix": "LIT.X", "issued_by": "LIT"}], "expected": [["LIT.X", "repeated"]]},
+    {"schemes": [{"prefix": "figshare"}], "expected": [["figshare", "repeated"]]},
+    {"schemes": [{"prefix": "openalex.topic"}], "expected": [["openalex.topic", "repeated"]]},
+    {"schemes": [{"prefix": "geo"}, {"prefix": "lit.y", "issued_by": "lit"}, {"prefix": "pmid"}, {"prefix": "lit.y", "issued_by": "lit"}], "expected": [["geo", "shadows_registry"], ["pmid", "shadows_registry"], ["lit.y", "repeated"]]}
+  ]
+}
