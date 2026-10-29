@@ -72,6 +72,39 @@ function readData(name: string): string {
   return readFileSync(new URL(`../data/${name}`, import.meta.url), "utf-8");
 }
 
+const SHARED_KEYS = ["name", "pattern", "uri_format", "why"] as const;
+
+/** The schemes of `local-schemes.toml`'s `schemes` table. Each entry holds exactly the four
+ * string keys `name`, `pattern`, `uri_format` and `why`; anything else is a data bug, refused
+ * here rather than left to change the fingerprint. */
+export function localSchemesFromTable(table: Record<string, unknown>): LocalScheme[] {
+  return Object.entries(table).map(([prefix, body]) => {
+    const name = JSON.stringify(prefix);
+    if (typeof body !== "object" || body === null || Array.isArray(body)) {
+      throw new Error(`local scheme ${name} must be a table`);
+    }
+    const fields = body as Record<string, unknown>;
+    for (const key of Object.keys(fields)) {
+      if (!(SHARED_KEYS as readonly string[]).includes(key)) {
+        throw new Error(`local scheme ${name} has an unknown key ${JSON.stringify(key)}`);
+      }
+    }
+    for (const key of SHARED_KEYS) {
+      if (!(key in fields)) throw new Error(`local scheme ${name} is missing ${JSON.stringify(key)}`);
+      if (typeof fields[key] !== "string") {
+        throw new Error(`local scheme ${name}: ${JSON.stringify(key)} must be a string`);
+      }
+    }
+    return new LocalScheme({
+      prefix,
+      name: fields.name as string,
+      pattern: fields.pattern as string,
+      uriFormat: fields.uri_format as string,
+      why: fields.why as string,
+    });
+  });
+}
+
 let defaultRegistry: Registry | undefined;
 
 /** Immutable: `withLocal` returns a new registry. */
@@ -126,23 +159,8 @@ export class Registry {
   static default(): Registry {
     if (defaultRegistry === undefined) {
       const upstream = Registry.fromDocument(JSON.parse(readData("bioregistry.json")) as RegistryDocument);
-      const shared = (
-        parseToml(readData("local-schemes.toml")) as {
-          schemes: Record<string, { name: string; pattern: string; uri_format: string; why: string }>;
-        }
-      ).schemes;
-      defaultRegistry = upstream.withLocal(
-        Object.entries(shared).map(
-          ([prefix, body]) =>
-            new LocalScheme({
-              prefix,
-              name: body.name,
-              pattern: body.pattern,
-              uriFormat: body.uri_format,
-              why: body.why,
-            }),
-        ),
-      );
+      const shared = (parseToml(readData("local-schemes.toml")) as { schemes: Record<string, unknown> }).schemes;
+      defaultRegistry = upstream.withLocal(localSchemesFromTable(shared));
     }
     return defaultRegistry;
   }

@@ -131,3 +131,45 @@ def test_canonical_prefix_wins_over_a_synonym():
     reg = Registry.from_document(doc)
     assert reg.canonical("second") == "second" and reg.canonical("SECOND") == "second"
     assert reg.canonical("first") == "first"
+
+
+GOOD_TABLE = {"name": "N", "pattern": "^[0-9]+$", "uri_format": "https://x/$1", "why": "w"}
+
+
+def test_shared_local_schemes_table_is_read_into_local_schemes():
+    from refs.registry import local_schemes_from_table
+
+    [scheme] = local_schemes_from_table({"x.y": GOOD_TABLE})
+    assert scheme == LocalScheme("x.y", "N", "^[0-9]+$", "https://x/$1", "w")
+
+
+@pytest.mark.parametrize("key", ["name", "pattern", "uri_format", "why"])
+def test_shared_local_scheme_refuses_a_missing_key(key):
+    from refs.registry import local_schemes_from_table
+
+    body = {k: v for k, v in GOOD_TABLE.items() if k != key}
+    with pytest.raises(ValueError, match=f"x.y.*{key}"):
+        local_schemes_from_table({"x.y": body})
+
+
+@pytest.mark.parametrize("key", ["name", "pattern", "uri_format", "why"])
+@pytest.mark.parametrize("value", [1, None, ["a"]])
+def test_shared_local_scheme_refuses_a_non_string_value(key, value):
+    from refs.registry import local_schemes_from_table
+
+    with pytest.raises(ValueError, match=f"x.y.*{key}"):
+        local_schemes_from_table({"x.y": {**GOOD_TABLE, key: value}})
+
+
+def test_shared_local_scheme_refuses_an_unknown_key():
+    from refs.registry import local_schemes_from_table
+
+    with pytest.raises(ValueError, match="x.y.*extra"):
+        local_schemes_from_table({"x.y": {**GOOD_TABLE, "extra": "1"}})
+
+
+def test_shared_local_scheme_refuses_a_non_table():
+    from refs.registry import local_schemes_from_table
+
+    with pytest.raises(ValueError, match="x.y"):
+        local_schemes_from_table({"x.y": "text"})

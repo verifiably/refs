@@ -6,7 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 import tomllib
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from functools import cache
 from importlib import resources
@@ -160,11 +160,31 @@ class Registry:
         return Registry(self.version, {**self._schemes, **added}, self._lookup, self._local | added.keys())
 
 
+_SHARED_KEYS = ("name", "pattern", "uri_format", "why")
+
+
+def local_schemes_from_table(table: Mapping[str, Any]) -> list[LocalScheme]:
+    """The schemes of `local-schemes.toml`'s `schemes` table. Each entry holds exactly the four
+    string keys `name`, `pattern`, `uri_format` and `why`; anything else is a data bug, refused
+    here rather than left to change the fingerprint."""
+    schemes: list[LocalScheme] = []
+    for prefix, body in table.items():
+        if not isinstance(body, Mapping):
+            raise ValueError(f"local scheme {prefix!r} must be a table")  # noqa: TRY004 - one error type for a bad data file
+        for key in body:
+            if key not in _SHARED_KEYS:
+                raise ValueError(f"local scheme {prefix!r} has an unknown key {key!r}")
+        for key in _SHARED_KEYS:
+            if key not in body:
+                raise ValueError(f"local scheme {prefix!r} is missing {key!r}")
+            if not isinstance(body[key], str):
+                raise ValueError(f"local scheme {prefix!r}: {key!r} must be a string")  # noqa: TRY004
+        schemes.append(LocalScheme(prefix, body["name"], body["pattern"], body["uri_format"], body["why"]))
+    return schemes
+
+
 @cache
 def _default() -> Registry:
     upstream = Registry.from_document(json.loads(_data("bioregistry.json")))
     shared = tomllib.loads(_data("local-schemes.toml").decode("utf-8"))["schemes"]
-    return upstream.with_local(
-        LocalScheme(prefix, body["name"], body["pattern"], body["uri_format"], body["why"])
-        for prefix, body in shared.items()
-    )
+    return upstream.with_local(local_schemes_from_table(shared))

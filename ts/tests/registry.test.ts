@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import { LocalScheme, RefsError, Registry } from "../src/index.js";
+import { localSchemesFromTable } from "../src/registry.js";
 import { loadFixture } from "./fixtures.js";
 
 interface Oracle {
@@ -181,5 +182,40 @@ describe("membership and lookup", () => {
       expect(DEFAULT.isLocal(prefix) && !DEFAULT.isUpstream(prefix)).toBe(true);
       expect([scheme.issuedBy, scheme.synonyms.length, scheme.refused]).toEqual([null, 0, null]);
     }
+  });
+});
+
+describe("the shared local schemes table", () => {
+  const good = { name: "N", pattern: "^[0-9]+$", uri_format: "https://x/$1", why: "w" };
+
+  test("is read into local schemes", () => {
+    const [scheme] = localSchemesFromTable({ "x.y": good });
+    expect([scheme?.prefix, scheme?.name, scheme?.pattern, scheme?.uriFormat, scheme?.why, scheme?.issuedBy]).toEqual([
+      "x.y",
+      "N",
+      "^[0-9]+$",
+      "https://x/$1",
+      "w",
+      null,
+    ]);
+  });
+
+  test.each(["name", "pattern", "uri_format", "why"])("refuses a missing %s", (key) => {
+    const { [key as keyof typeof good]: _omitted, ...body } = good;
+    expect(() => localSchemesFromTable({ "x.y": body })).toThrow(new RegExp(`x\\.y.*${key}`));
+  });
+
+  test.each(["name", "pattern", "uri_format", "why"])("refuses a non-string %s", (key) => {
+    for (const value of [1, null, ["a"]]) {
+      expect(() => localSchemesFromTable({ "x.y": { ...good, [key]: value } })).toThrow(new RegExp(`x\\.y.*${key}`));
+    }
+  });
+
+  test("refuses an unknown key", () => {
+    expect(() => localSchemesFromTable({ "x.y": { ...good, extra: "1" } })).toThrow(/x\.y.*extra/);
+  });
+
+  test("refuses a non-table entry", () => {
+    expect(() => localSchemesFromTable({ "x.y": "text" })).toThrow(/x\.y/);
   });
 });

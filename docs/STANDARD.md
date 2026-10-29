@@ -270,7 +270,10 @@ checkout).
 
 `registry/local-schemes.toml` holds shared external schemes for prefixes Bioregistry
 lacks, each a table `[schemes.<prefix>]` with `name`, `pattern` (in the dialect),
-`uri_format` and `why` (why Bioregistry does not cover it). Today `openalex.topic` and
+`uri_format` and `why` (why Bioregistry does not cover it). Each key is required and a
+string, and no other key is allowed; a table that breaks this is a data bug, refused when the
+default registry loads (`ValueError` / `Error`, not a `RefsError`), so it cannot quietly
+change the fingerprint. Today `openalex.topic` and
 `figshare`. A shared prefix MUST be new: neither a Bioregistry prefix nor a synonym of
 one (case-insensitively). The default registry (`Registry.default()`) is the snapshot
 plus these schemes, added as local schemes with no `issued_by`.
