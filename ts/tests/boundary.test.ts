@@ -1,6 +1,10 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 
+const IDENTIFIER_MODULES = ["dialect.ts", "ids.ts", "registry.ts", "vocab.ts", "errors.ts", "order.ts"];
+/** Each other, node builtins and their libraries; never `./facet.js`, which imports nodes. */
+const ALLOWED = /^(\.\/(?:dialect|ids|registry|vocab|errors|order)\.js|node:[a-z]+|canonicalize|smol-toml)$/;
+
 /** The module specifiers a source file imports or re-exports from, by line. */
 function importedModules(file: string): string[] {
   const text = readFileSync(new URL(`../src/${file}`, import.meta.url), "utf-8");
@@ -12,7 +16,7 @@ function importedModules(file: string): string[] {
 }
 
 describe("the identifier modules do not import nodes", () => {
-  test.each(["dialect.ts", "ids.ts", "registry.ts", "vocab.ts", "errors.ts", "order.ts"])("%s", (file) => {
+  test.each(IDENTIFIER_MODULES)("%s", (file) => {
     const modules = importedModules(file);
     expect(modules.filter((m) => m.startsWith("@verifiably/nodes"))).toEqual([]);
   });
@@ -22,9 +26,12 @@ describe("the identifier modules do not import nodes", () => {
   });
 
   test("the identifier modules import only each other, node builtins and their libraries", () => {
-    const allowed = /^(\.\/[a-z]+\.js|node:[a-z]+|canonicalize|smol-toml)$/;
-    for (const file of ["dialect.ts", "ids.ts", "registry.ts", "vocab.ts", "errors.ts", "order.ts"]) {
-      for (const m of importedModules(file)) expect(m, `${file} imports ${m}`).toMatch(allowed);
+    for (const file of IDENTIFIER_MODULES) {
+      for (const m of importedModules(file)) expect(m, `${file} imports ${m}`).toMatch(ALLOWED);
     }
+  });
+
+  test("the allow-list refuses the facet module, which would bring nodes in", () => {
+    expect("./facet.js").not.toMatch(ALLOWED);
   });
 });

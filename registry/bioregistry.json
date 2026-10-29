@@ -1276,7 +1276,7 @@
   "biolink": {
    "name": "BioLink Model",
    "pattern": null,
-   "refused": "negated shorthand \\S has no dialect form: its ASCII complement would accept non-ASCII characters Python refuses (at 1)",
+   "refused": "negated shorthand \\S has no dialect form: its ASCII complement would accept characters Python refuses (at 1)",
    "rules": [],
    "synonyms": [],
    "upstream_pattern": "^\\S+$",
@@ -2081,7 +2081,7 @@
   "ccf": {
    "name": "Human Reference Atlas Common Coordinate Framework Ontology",
    "pattern": null,
-   "refused": "negated shorthand \\S has no dialect form: its ASCII complement would accept non-ASCII characters Python refuses (at 1)",
+   "refused": "negated shorthand \\S has no dialect form: its ASCII complement would accept characters Python refuses (at 1)",
    "rules": [],
    "synonyms": [],
    "upstream_pattern": "^\\S+$",
@@ -4345,7 +4345,7 @@
   "d1id": {
    "name": "DataONE",
    "pattern": null,
-   "refused": "negated shorthand \\S has no dialect form: its ASCII complement would accept non-ASCII characters Python refuses (at 1)",
+   "refused": "negated shorthand \\S has no dialect form: its ASCII complement would accept characters Python refuses (at 1)",
    "rules": [],
    "synonyms": [],
    "upstream_pattern": "^\\S+$",
@@ -8976,7 +8976,7 @@
   "gtdb": {
    "name": "Genome Taxonomy Database",
    "pattern": null,
-   "refused": "negated shorthand \\S has no dialect form: its ASCII complement would accept non-ASCII characters Python refuses (at 15)",
+   "refused": "negated shorthand \\S has no dialect form: its ASCII complement would accept characters Python refuses (at 15)",
    "rules": [],
    "synonyms": [],
    "upstream_pattern": "^[cdfgops]__\\w+\\S+$",
@@ -12531,7 +12531,7 @@
   "mavedb": {
    "name": "Multiplexed Assays of Variant Effect Database",
    "pattern": null,
-   "refused": "negated shorthand \\S has no dialect form: its ASCII complement would accept non-ASCII characters Python refuses (at 1)",
+   "refused": "negated shorthand \\S has no dialect form: its ASCII complement would accept characters Python refuses (at 1)",
    "rules": [],
    "synonyms": [],
    "upstream_pattern": "^\\S+$",
@@ -19730,7 +19730,7 @@
   "sphn": {
    "name": "Swiss Personalized Health Network Schema",
    "pattern": null,
-   "refused": "negated shorthand \\S has no dialect form: its ASCII complement would accept non-ASCII characters Python refuses (at 1)",
+   "refused": "negated shorthand \\S has no dialect form: its ASCII complement would accept characters Python refuses (at 1)",
    "rules": [],
    "synonyms": [],
    "upstream_pattern": "^\\S+$",
@@ -22372,7 +22372,7 @@
   "swh": {
    "name": "Software Heritage",
    "pattern": null,
-   "refused": "negated shorthand \\S has no dialect form: its ASCII complement would accept non-ASCII characters Python refuses (at 73)",
+   "refused": "negated shorthand \\S has no dialect form: its ASCII complement would accept characters Python refuses (at 73)",
    "rules": [],
    "synonyms": [],
    "upstream_pattern": "^[1-9]:(cnt|dir|rel|rev|snp):[0-9a-f]+(;(origin|visit|anchor|path|lines)=\\S+)*$",
@@ -23986,7 +23986,7 @@
   "vectorbase": {
    "name": "VectorBase",
    "pattern": null,
-   "refused": "negated shorthand \\D has no dialect form: its ASCII complement would accept non-ASCII characters Python refuses (at 1)",
+   "refused": "negated shorthand \\D has no dialect form: its ASCII complement would accept characters Python refuses (at 1)",
    "rules": [],
    "synonyms": [],
    "upstream_pattern": "^\\D{4}\\d{6}(\\-\\D{2})?$",
@@ -24522,7 +24522,7 @@
   "wikipedia.en": {
    "name": "Wikipedia",
    "pattern": null,
-   "refused": "negated shorthand \\S has no dialect form: its ASCII complement would accept non-ASCII characters Python refuses (at 1)",
+   "refused": "negated shorthand \\S has no dialect form: its ASCII complement would accept characters Python refuses (at 1)",
    "rules": [],
    "synonyms": [
     "Wikipedia",

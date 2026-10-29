@@ -9,7 +9,8 @@ is, what it does not do, and runnable examples are in the repository README.
 Tier 1 (parity with Python): the pattern dialect (`checkPattern`, `compilePattern`), CURIE
 parsing (`parseCurie`, `Curie`, `Scheme`), the registry (`Registry`, `LocalScheme`, with its
 fingerprint and collisions), vocabulary declarations (`parseVocabularies`, `Vocabulary`)
-and the `refs/about` facet (`FACET`, `aboutFacet`). Tier 3, Python only: `rewrite`,
+and the `refs/about` facet (`FACET`, `aboutFacet`). Tier 3, in both languages but without a
+parity obligation: `buildAbout`. Tier 3, Python only: `rewrite`,
 `samples`, the vendoring tool, `load_vocabularies` (read a TOML file yourself and pass the
 parsed table to `parseVocabularies`) and the dialect AST.
 
