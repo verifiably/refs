@@ -71,6 +71,18 @@
       "reason": "the id parses but is not its canonical text"
     },
     {
+      "name": "a case form of an upstream prefix",
+      "payload": {"entries": [{"id": "HGNC:6390"}]},
+      "verdict": "refused",
+      "reason": "the id parses to hgnc:6390, its canonical text"
+    },
+    {
+      "name": "a synonym prefix",
+      "payload": {"entries": [{"id": "PMID:1"}]},
+      "verdict": "refused",
+      "reason": "PMID is a synonym of pubmed: write pubmed:1"
+    },
+    {
       "name": "an unparseable id",
       "payload": {"entries": [{"id": "KIF14"}]},
       "verdict": "refused",
