@@ -1,0 +1,76 @@
+{
+  "local_schemes": [
+    {
+      "prefix": "lit.topic-c",
+      "name": "topic",
+      "pattern": "^[A-Z]+$",
+      "uri_format": null,
+      "why": "a self-issued vocabulary for the vocabulary cases",
+      "issued_by": "lit"
+    }
+  ],
+  "accepted": [
+    {
+      "name": "the spec 5.4 example",
+      "table": {
+        "hgnc.symbol": {"issuer": "external", "release": "2026-07-01", "accepted": ["2026-04-01"]},
+        "openalex.topic": {"issuer": "external", "release": "2026-06-26"},
+        "lit.topic-c": {"issuer": "self", "release": "run:1"}
+      },
+      "expected": {
+        "hgnc.symbol": {"issuer": "external", "release": "2026-07-01", "accepted": ["2026-04-01"]},
+        "openalex.topic": {"issuer": "external", "release": "2026-06-26", "accepted": []},
+        "lit.topic-c": {"issuer": "self", "release": "run:1", "accepted": []}
+      }
+    },
+    {
+      "name": "no declarations",
+      "table": {},
+      "expected": {}
+    },
+    {
+      "name": "an empty accepted list",
+      "table": {"hgnc.symbol": {"issuer": "external", "release": "a", "accepted": []}},
+      "expected": {"hgnc.symbol": {"issuer": "external", "release": "a", "accepted": []}}
+    },
+    {
+      "name": "accepted keeps its order",
+      "table": {"hgnc.symbol": {"issuer": "external", "release": "c", "accepted": ["b", "a"]}},
+      "expected": {"hgnc.symbol": {"issuer": "external", "release": "c", "accepted": ["b", "a"]}}
+    },
+    {
+      "name": "a self-issued vocabulary with an accepted release",
+      "table": {"lit.topic-c": {"issuer": "self", "release": "run:1", "accepted": ["run:0"]}},
+      "expected": {"lit.topic-c": {"issuer": "self", "release": "run:1", "accepted": ["run:0"]}}
+    },
+    {
+      "name": "a release that is not ASCII",
+      "table": {"chebi": {"issuer": "external", "release": "Ａ", "accepted": ["𝟙"]}},
+      "expected": {"chebi": {"issuer": "external", "release": "Ａ", "accepted": ["𝟙"]}}
+    }
+  ],
+  "refused": [
+    {"name": "an empty release", "table": {"hgnc.symbol": {"issuer": "external", "release": ""}}},
+    {"name": "a numeric release", "table": {"hgnc.symbol": {"issuer": "external", "release": 1}}},
+    {"name": "no release", "table": {"hgnc.symbol": {"issuer": "external"}}},
+    {"name": "no issuer", "table": {"hgnc.symbol": {"release": "a"}}},
+    {"name": "an unknown issuer", "table": {"hgnc.symbol": {"issuer": "other", "release": "a"}}},
+    {"name": "a numeric issuer", "table": {"hgnc.symbol": {"issuer": 1, "release": "a"}}},
+    {"name": "accepted repeats a release", "table": {"hgnc.symbol": {"issuer": "external", "release": "a", "accepted": ["b", "b"]}}},
+    {"name": "accepted repeats the current release", "table": {"hgnc.symbol": {"issuer": "external", "release": "a", "accepted": ["a"]}}},
+    {"name": "an empty accepted release", "table": {"hgnc.symbol": {"issuer": "external", "release": "a", "accepted": [""]}}},
+    {"name": "a numeric accepted release", "table": {"hgnc.symbol": {"issuer": "external", "release": "a", "accepted": [1]}}},
+    {"name": "accepted as a string", "table": {"hgnc.symbol": {"issuer": "external", "release": "a", "accepted": "b"}}},
+    {"name": "accepted as a table", "table": {"hgnc.symbol": {"issuer": "external", "release": "a", "accepted": {"b": 1}}}},
+    {"name": "self-issued on an upstream scheme", "table": {"hgnc.symbol": {"issuer": "self", "release": "a"}}},
+    {"name": "self-issued on a shared local scheme", "table": {"openalex.topic": {"issuer": "self", "release": "a"}}},
+    {"name": "external on a self-issued scheme", "table": {"lit.topic-c": {"issuer": "external", "release": "a"}}},
+    {"name": "an unknown prefix", "table": {"nope": {"issuer": "external", "release": "a"}}},
+    {"name": "a prefix that is not canonical", "table": {"HGNC.SYMBOL": {"issuer": "external", "release": "a"}}},
+    {"name": "a synonym of a prefix", "table": {"PMID": {"issuer": "external", "release": "a"}}},
+    {"name": "an unknown key", "table": {"hgnc.symbol": {"issuer": "external", "release": "a", "extra": 1}}},
+    {"name": "a declaration that is a string", "table": {"hgnc.symbol": "external"}},
+    {"name": "a declaration that is a list", "table": {"hgnc.symbol": ["external", "a"]}},
+    {"name": "a later declaration is bad", "table": {"hgnc.symbol": {"issuer": "external", "release": "a"}, "nope": {"issuer": "external", "release": "a"}}}
+  ]
+}

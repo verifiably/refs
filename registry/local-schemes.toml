@@ -1,0 +1,14 @@
+# Shared external schemes for prefixes Bioregistry lacks (spec section 5.3). The default
+# registry includes them; each pattern is in the dialect, and each says why it exists.
+
+[schemes."openalex.topic"]
+name = "OpenAlex topic"
+pattern = "^T[0-9]+$"
+uri_format = "https://openalex.org/$1"
+why = "Bioregistry's openalex pattern ^[WAICV]\\d{2,}$ covers works, authors, institutions, concepts and venues, not topics"
+
+[schemes.figshare]
+name = "figshare"
+pattern = "^[0-9]+$"
+uri_format = "https://figshare.com/articles/dataset/_/$1"
+why = "Bioregistry has no figshare prefix (checked 2026-10-10); items are numbered and resolve by number. Moved from quarry's catalog, where the pattern was ^\\d+$"

@@ -1,0 +1,169 @@
+{
+  "local_schemes": [
+    {
+      "prefix": "lit.topic-c",
+      "name": "lit topic cluster",
+      "pattern": "^[A-Z0-9]+$",
+      "uri_format": null,
+      "why": "a self-issued vocabulary for the facet cases",
+      "issued_by": "lit"
+    }
+  ],
+  "vocabularies": {
+    "hgnc.symbol": {"issuer": "external", "release": "2026-07-01", "accepted": ["2026-04-01"]},
+    "openalex.topic": {"issuer": "external", "release": "2026-06-26"},
+    "lit.topic-c": {"issuer": "self", "release": "run:1", "accepted": ["run:0"]},
+    "chebi": {"issuer": "external", "release": "\uff21", "accepted": ["\ud835\udfd9"]}
+  },
+  "cases": [
+    {
+      "name": "the spec 5.5 example",
+      "payload": {"entries": [
+        {"id": "hgnc.symbol:KIF14", "release": "2026-07-01"},
+        {"id": "mesh:D009101"},
+        {"id": "openalex.topic:T10001", "release": "2026-06-26"}
+      ]},
+      "verdict": "ok"
+    },
+    {
+      "name": "mixed releases under one prefix",
+      "payload": {"entries": [
+        {"id": "lit.topic-c:A", "release": "run:0"},
+        {"id": "lit.topic-c:B", "release": "run:1"}
+      ]},
+      "verdict": "ok"
+    },
+    {
+      "name": "the same id at two releases",
+      "payload": {"entries": [
+        {"id": "hgnc.symbol:KIF14", "release": "2026-04-01"},
+        {"id": "hgnc.symbol:KIF14", "release": "2026-07-01"}
+      ]},
+      "verdict": "ok"
+    },
+    {
+      "name": "an accepted release",
+      "payload": {"entries": [{"id": "hgnc.symbol:KIF14", "release": "2026-04-01"}]},
+      "verdict": "ok"
+    },
+    {
+      "name": "an unknown release",
+      "payload": {"entries": [{"id": "hgnc.symbol:KIF14", "release": "2020-01-01"}]},
+      "verdict": "refused",
+      "reason": "the release is neither the declaration's release nor accepted"
+    },
+    {
+      "name": "a release on a prefix with no declaration",
+      "payload": {"entries": [{"id": "mesh:D009101", "release": "2026-07-01"}]},
+      "verdict": "refused",
+      "reason": "mesh declares no vocabulary, so a release is refused"
+    },
+    {
+      "name": "a missing release on a declared prefix",
+      "payload": {"entries": [{"id": "openalex.topic:T1"}]},
+      "verdict": "refused",
+      "reason": "openalex.topic is a declared vocabulary, so the release is required"
+    },
+    {
+      "name": "a non-canonical prefix",
+      "payload": {"entries": [{"id": "HGNC.SYMBOL:KIF14", "release": "2026-07-01"}]},
+      "verdict": "refused",
+      "reason": "the id parses but is not its canonical text"
+    },
+    {
+      "name": "an unparseable id",
+      "payload": {"entries": [{"id": "KIF14"}]},
+      "verdict": "refused",
+      "reason": "no prefix"
+    },
+    {
+      "name": "unsorted entries",
+      "payload": {"entries": [
+        {"id": "mesh:D009101"},
+        {"id": "doi:10.1000/x"}
+      ]},
+      "verdict": "refused",
+      "reason": "entries are sorted by id"
+    },
+    {
+      "name": "a duplicate id and release",
+      "payload": {"entries": [
+        {"id": "mesh:D009101"},
+        {"id": "mesh:D009101"}
+      ]},
+      "verdict": "refused",
+      "reason": "entries are unique by (id, release)"
+    },
+    {
+      "name": "no entries",
+      "payload": {"entries": []},
+      "verdict": "refused",
+      "reason": "entries must be non-empty"
+    },
+    {
+      "name": "a null release",
+      "payload": {"entries": [{"id": "mesh:D009101", "release": null}]},
+      "verdict": "refused",
+      "reason": "release is a string; leave it out for none"
+    },
+    {
+      "name": "a numeric release",
+      "payload": {"entries": [{"id": "hgnc.symbol:KIF14", "release": 20260701}]},
+      "verdict": "refused",
+      "reason": "release is a string"
+    },
+    {
+      "name": "a numeric id",
+      "payload": {"entries": [{"id": 1}]},
+      "verdict": "refused",
+      "reason": "id is a string"
+    },
+    {
+      "name": "an empty entry",
+      "payload": {"entries": [{}]},
+      "verdict": "refused",
+      "reason": "id is required"
+    },
+    {
+      "name": "a payload without entries",
+      "payload": {},
+      "verdict": "refused",
+      "reason": "entries is required"
+    },
+    {
+      "name": "entries as a string",
+      "payload": {"entries": "mesh:D009101"},
+      "verdict": "refused",
+      "reason": "entries is a list"
+    },
+    {
+      "name": "an unknown key at the top",
+      "payload": {"entries": [{"id": "mesh:D009101"}], "extra": 1},
+      "verdict": "refused",
+      "reason": "unknown keys are refused"
+    },
+    {
+      "name": "an unknown key in an entry",
+      "payload": {"entries": [{"id": "mesh:D009101", "note": "x"}]},
+      "verdict": "refused",
+      "reason": "unknown keys are refused"
+    },
+    {
+      "name": "releases ordered by code point",
+      "payload": {"entries": [
+        {"id": "chebi:15377", "release": "\uff21"},
+        {"id": "chebi:15377", "release": "\ud835\udfd9"}
+      ]},
+      "verdict": "ok"
+    },
+    {
+      "name": "releases in UTF-16 code unit order",
+      "payload": {"entries": [
+        {"id": "chebi:15377", "release": "\ud835\udfd9"},
+        {"id": "chebi:15377", "release": "\uff21"}
+      ]},
+      "verdict": "refused",
+      "reason": "U+1D7D9 sorts after U+FF21 by code point, though a UTF-16 sort puts it first"
+    }
+  ]
+}

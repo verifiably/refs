@@ -11,3 +11,7 @@ ts/dist/
 .tt/
 # pytest-testmon's per-checkout selection database, rebuilt on demand.
 .testmondata*
+
+# Each package's copy of registry/, written by `just registry-sync`.
+python/src/refs/data/
+ts/data/
