@@ -111,7 +111,8 @@ describe("withLocal", () => {
   });
 
   test("issuedBy requires its prefix and a dot", () => {
-    for (const prefix of ["topics.x", "lit", "litter.x"]) {
+    // compared case-sensitively, before lower-casing: LIT.x is not issued by lit
+    for (const prefix of ["topics.x", "lit", "litter.x", "LIT.x"]) {
       try {
         local(prefix, "lit");
         throw new Error("expected local_collision");
@@ -137,6 +138,7 @@ describe("withLocal", () => {
     expect(reg.isLocal("lit.x")).toBe(true);
     expect(reg.scheme("lit.x").prefix).toBe("lit.x");
     expect(reg.canonical("LIT.X")).toBe("lit.x");
+    expect(reg.scheme("lit.x").issuedBy).toBe("Lit"); // stored as declared
   });
 });
 

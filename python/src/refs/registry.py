@@ -47,7 +47,12 @@ class Collision:
 
 
 def _data(name: str) -> bytes:
-    return (resources.files("refs") / "data" / name).read_bytes()
+    path = resources.files("refs") / "data" / name
+    try:
+        return path.read_bytes()
+    except FileNotFoundError as e:
+        # The data directory is a gitignored copy of registry/, so a fresh checkout lacks it.
+        raise FileNotFoundError(f"refs registry data {name!r} is missing; run `just registry-sync`") from e
 
 
 class Registry:
@@ -126,7 +131,8 @@ class Registry:
         return prefix.lower() in self._local
 
     def collisions(self, schemes: Iterable[LocalScheme]) -> list[Collision]:
-        """The conflicts `with_local` would refuse, in declaration order, without raising."""
+        """The conflicts `with_local` would refuse, in declaration order, without raising. A pattern
+        outside the dialect, which `with_local` also refuses, is not a collision and is not listed."""
         seen = set(self._local)
         found: list[Collision] = []
         for scheme in schemes:

@@ -89,6 +89,8 @@ def test_issued_by_requires_its_prefix():
         LocalScheme("lit", "x", None, None, "x", issued_by="lit")
     with pytest.raises(RefsError):
         LocalScheme("litter.x", "x", None, None, "x", issued_by="lit")
+    with pytest.raises(RefsError):  # compared case-sensitively, before lower-casing
+        LocalScheme("LIT.x", "x", None, None, "x", issued_by="lit")
 
 
 def test_local_pattern_outside_dialect_is_refused():
@@ -102,6 +104,7 @@ def test_local_prefix_is_canonicalized_without_replacing_an_alias():
     assert reg.is_local("Lit.X") and reg.is_local("lit.x")
     assert reg.scheme("lit.x").prefix == "lit.x"
     assert reg.canonical("LIT.X") == "lit.x"
+    assert reg.scheme("lit.x").issued_by == "Lit"  # stored as declared
 
 
 def test_upstream_and_local_membership():
@@ -173,3 +176,12 @@ def test_shared_local_scheme_refuses_a_non_table():
 
     with pytest.raises(ValueError, match="x.y"):
         local_schemes_from_table({"x.y": "text"})
+
+
+def test_missing_data_names_the_sync_recipe(monkeypatch, tmp_path):
+    # The data copy is gitignored; a fresh checkout that skipped `just registry-sync` lacks it.
+    import refs.registry
+
+    monkeypatch.setattr(refs.registry.resources, "files", lambda _package: tmp_path)
+    with pytest.raises(FileNotFoundError, match="just registry-sync"):
+        refs.registry._data("bioregistry.json")

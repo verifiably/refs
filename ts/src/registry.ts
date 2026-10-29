@@ -213,7 +213,8 @@ export class Registry {
     return this.local.has(prefix.toLowerCase());
   }
 
-  /** The conflicts `withLocal` would refuse, in declaration order, without throwing. */
+  /** The conflicts `withLocal` would refuse, in declaration order, without throwing. A pattern
+   * outside the dialect, which `withLocal` also refuses, is not a collision and is not listed. */
   collisions(schemes: Iterable<LocalScheme>): Collision[] {
     const seen = new Set(this.local);
     const found: Collision[] = [];
