@@ -81,7 +81,7 @@ def test_scheme_is_frozen_data():
 
 def test_identifier_modules_do_not_import_nodes(tmp_path):
     code = (
-        "import refs.ids, refs.registry, refs.dialect, sys; "
+        "import refs.ids, refs.registry, refs.dialect, refs.vocab, sys; "
         "assert not any(m == 'nodes' or m.startswith('nodes.') for m in sys.modules), 'nodes imported'"
     )
     env = {"PATH": os.environ["PATH"], "HOME": str(tmp_path)}
