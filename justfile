@@ -33,7 +33,15 @@ ts_check_cmd := ""
 fast_cmd := py_fast_cmd
 test_cmd := py_test_cmd
 one_cmd := "cd python && uv run --frozen pytest"
-check_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && " + py_check_cmd + " && tasks check"
+check_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && " + registry_check_cmd + " && " + py_check_cmd + " && tasks check"
+
+# registry/ is the one copy of the vendored registry; each package carries a gitignored copy
+# (python/src/refs/data/, ts/data/) that `registry-sync` writes and `registry-check` compares
+# with it by sha256, failing on a copy that is missing, extra or different. Subshells, like
+# the package commands, so a `;` inside cannot break the `&&` chains they are composed into.
+registry_dirs := "python/src/refs/data ts/data"
+registry_sync_cmd := "(for d in " + registry_dirs + "; do mkdir -p $d && rm -f $d/* && cp registry/* $d/ || exit 1; done)"
+registry_check_cmd := "(want=$(cd registry && sha256sum -- *); for d in " + registry_dirs + "; do have=$(cd $d 2>/dev/null && sha256sum -- *); [ \"$have\" = \"$want\" ] || { echo \"registry-check: $d does not match registry/; run just registry-sync\" >&2; exit 1; }; done)"
 
 # What a fresh checkout or worktree needs before the suite can run. Sibling path
 # dependencies (../nodes) resolve against the physical checkout dir. In a task worktree
@@ -68,7 +76,20 @@ docs:
 # Make this checkout runnable. Run once after `git worktree add`; rerun after a
 # dependency change.
 setup:
-    {{tt}} setup -- sh -c '{{setup_cmd}} && {{py_setup_cmd}}'
+    {{tt}} setup -- sh -c '{{setup_cmd}} && {{py_setup_cmd}} && {{registry_sync_cmd}}'
+
+# Vendor a Bioregistry snapshot (the reduced bioregistry.json and its expected sha256) into
+# registry/ in the pattern dialect, then copy registry/ into the packages.
+registry-vendor snapshot sha256: && registry-sync
+    {{tt}} registry-vendor -- uv run --frozen --project python python tools/vendor_registry.py --from-snapshot "$1" --sha256 "$2"
+
+# Copy registry/ into each package's gitignored data directory.
+registry-sync:
+    {{tt}} registry-sync -- sh -c '{{registry_sync_cmd}}'
+
+# Compare each package's copy of registry/ with it by sha256; `check` runs this too.
+registry-check:
+    {{tt}} registry-check -- sh -c '{{registry_check_cmd}}'
 
 # What the pre-commit hook runs: `check`'s command under its own hook target.
 hook-pre-commit:

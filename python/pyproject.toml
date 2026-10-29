@@ -21,6 +21,8 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 core-metadata-version = "2.5"
 packages = ["src/refs"]
+# The registry copy is gitignored (written by `just registry-sync`); ship it anyway.
+artifacts = ["src/refs/data/*"]
 
 [tool.uv.sources]
 verifiably-nodes = { path = "../../nodes/python" }

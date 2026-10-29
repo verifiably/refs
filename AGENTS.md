@@ -7,7 +7,8 @@ Vocabulary identifiers pinned to releases: the reference layer above nodes
 ## Setup
 
 `just setup` links `../nodes` when the checkout is a git worktree, then refuses a tree
-where `../nodes/python/pyproject.toml` is missing. Run it right after `git worktree add`.
+where `../nodes/python/pyproject.toml` is missing, then copies `registry/` into the packages
+(`just registry-sync`). Run it right after `git worktree add`.
 
 ## Gates
 
@@ -15,13 +16,18 @@ where `../nodes/python/pyproject.toml` is missing. Run it right after `git workt
   (`just test-one tests/test_dialect.py`). The TypeScript package is not wired yet.
 - `just test-fast`: affected-only (pytest-testmon). `just test`: the full suite. Both
   cover Python only until the TypeScript package lands.
-- `just check`: `ops-check`, `ops-docs check`, ruff and pyright on `python/`, and
-  `tasks check`. `just gate` is `check` then `test`.
+- `just check`: `ops-check`, `ops-docs check`, `registry-check`, ruff and pyright on
+  `python/`, and `tasks check`. `just gate` is `check` then `test`.
 - The hooks in `.githooks/` run the same commands; the full suite runs at pre-push, as no
   CI is configured. Every recipe runs through `tools/tt`; do not call a test runner
   directly.
 
 ## Layout
 
-- `tools/`: vendored from ops; never edit in place.
+- `tools/`: vendored from ops; never edit in place. `tools/vendor_registry.py` is this
+  project's own: `just registry-vendor <snapshot> <sha256>` runs it.
+- `registry/`: the vendored Bioregistry snapshot in the pattern dialect, its
+  `registry/SOURCES.toml` and the shared `registry/local-schemes.toml`; the one copy.
+  `just registry-sync` copies it into `python/src/refs/data/` and `ts/data/` (gitignored),
+  and `registry-check` compares the copies with it.
 - `.githooks/`: git hooks; a fresh clone runs `git config core.hooksPath .githooks`.
