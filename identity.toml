@@ -7,5 +7,5 @@ purpose = "Vocabulary identifiers pinned to releases: the reference layer above 
 abstract = """
 A facet (refs/about) that lets a node carry identifiers drawn from vocabularies, with a CURIE grammar parsed against a pinned Bioregistry release and each identifier optionally pinned to a vocabulary release. Python and TypeScript over one shared format, layered above nodes and below the domain profiles. refs only parses, validates and records identifiers; resolving one is quarry's job.
 """
-authority = []
+authority = ["docs/STANDARD.md"]
 subsystems = []
