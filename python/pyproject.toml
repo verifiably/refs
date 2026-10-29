@@ -25,7 +25,7 @@ packages = ["src/refs"]
 artifacts = ["src/refs/data/*"]
 
 [tool.uv.sources]
-verifiably-nodes = { path = "../../nodes/python" }
+verifiably-nodes = { path = "../../nodes/python", editable = true }
 
 [tool.pytest.ini_options]
 addopts = "-q"
