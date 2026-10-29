@@ -28,20 +28,23 @@ Guarantees fall into three conformance tiers:
 - **Tier 2: none yet.** Every pinned behaviour is tier 1.
 - **Tier 3: per-language and tooling surface.** No parity obligation: `load_vocabularies`
   (Python reads a TOML file; the TypeScript package takes the parsed table through
-  `parseVocabularies`), `build_about` / `buildAbout`, the Python AST (`parse_pattern`,
+  `parseVocabularies`), `refs.facet.build_about` / `buildAbout`, the Python AST (`parse_pattern`,
   `Ast`), `rewrite`, `samples`, and the vendoring tool (§4.7). They are tested by the
   suites' own unit tests, not by shared fixtures.
 
-**Names.** The Python and TypeScript APIs differ only in spelling:
+**Names.** The Python and TypeScript APIs differ only in spelling. The facet's names
+(`FACET`, `about_facet`, `build_about`) live in `refs.facet`, the only Python module that
+imports nodes, and are not exported from `refs`; every other Python name is exported from
+`refs`.
 
-| Concept | Python (`refs`) | TypeScript (`@verifiably/refs`) |
+| Concept | Python (`refs`, except where a module is named) | TypeScript (`@verifiably/refs`) |
 |---------|-----------------|---------------------------------|
 | Parse a CURIE | `parse(text, registry)` | `parseCurie(text, registry)` |
 | Check, compile a pattern | `check_pattern`, `compile_pattern` | `checkPattern`, `compilePattern` |
 | Registry | `Registry.default()`, `.with_local()`, `.collisions()`, `.fingerprint`, `.canonical()`, `.scheme()`, `.is_local()`, `.is_upstream()` | `Registry.default()`, `.withLocal()`, `.collisions()`, `.fingerprint`, `.canonical()`, `.scheme()`, `.isLocal()`, `.isUpstream()` |
 | Local scheme | `LocalScheme(..., issued_by=)` | `new LocalScheme({ ..., issuedBy })` |
 | Vocabularies | `parse_vocabularies`, `Vocabulary` | `parseVocabularies`, `Vocabulary` |
-| The facet | `FACET`, `about_facet(registry, vocabularies)` | `FACET`, `aboutFacet(registry, vocabularies)` |
+| The facet | `refs.facet.FACET`, `refs.facet.about_facet(registry, vocabularies)` | `FACET`, `aboutFacet(registry, vocabularies)` |
 | Errors | `RefsError(kind, detail, position)` | `RefsError` with the same fields |
 
 **Errors.** A refusal is a `RefsError` carrying `kind` (§3.3), `detail` (human text) and
@@ -436,7 +439,7 @@ refs refusal while checking an entry (an unparseable id) surfaces as that `Facet
 not as a `RefsError`. Only the verdict and the node id plus facet name in the message are
 pinned. Fixture: `facet.json`.
 
-**`build_about(entries, registry)` / `buildAbout` (tier 3).** A convenience that returns a
+**`refs.facet.build_about(entries, registry)` / `buildAbout` (tier 3).** A convenience that returns a
 payload from `(id, release-or-none)` pairs: ids canonicalised (an unparseable id raises
 its `RefsError`), duplicates dropped, entries sorted as above. It does not check releases
 against declarations; the invariant does.
