@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import random
 import re
+import re._constants as sre  # the stdlib's own regex parser, an oracle independent of refs.rewrite
+import re._parser as sre_parse
 import zlib
 from pathlib import Path
 
@@ -77,16 +79,93 @@ def _printable(rng: random.Random) -> str:
     return "".join(chr(rng.randint(0x20, 0x7E)) for _ in range(rng.randint(0, 12)))
 
 
+_ASCII = [chr(c) for c in range(0x20, 0x7F)] + list("\t\n\v\f\r")
+_CATEGORY = {
+    sre.CATEGORY_DIGIT: str.isdigit,
+    sre.CATEGORY_NOT_DIGIT: lambda c: not c.isdigit(),
+    sre.CATEGORY_WORD: lambda c: c.isalnum() or c == "_",
+    sre.CATEGORY_NOT_WORD: lambda c: not (c.isalnum() or c == "_"),
+    sre.CATEGORY_SPACE: str.isspace,
+    sre.CATEGORY_NOT_SPACE: lambda c: not c.isspace(),
+}
+
+
+def _in_class(items, c: str) -> bool:
+    negate = False
+    hit = False
+    for op, av in items:
+        if op is sre.NEGATE:
+            negate = True
+        elif op is sre.LITERAL:
+            hit = hit or c == chr(av)
+        elif op is sre.RANGE:
+            hit = hit or av[0] <= ord(c) <= av[1]
+        elif op is sre.CATEGORY:
+            hit = hit or _CATEGORY[av](c)
+        else:
+            raise ValueError(f"no sampler for class item {op}")
+    return hit is not negate
+
+
+def _draw_upstream(tree, rng: random.Random) -> str:
+    """One string a Python pattern's parse tree is likely to match, from ASCII only."""
+    out: list[str] = []
+    for op, av in tree:
+        if op is sre.LITERAL:
+            out.append(chr(av))
+        elif op is sre.NOT_LITERAL:
+            out.append(rng.choice([c for c in _ASCII if c != chr(av)]))
+        elif op is sre.ANY:
+            out.append(rng.choice([c for c in _ASCII if c != "\n"]))
+        elif op is sre.IN:
+            out.append(rng.choice([c for c in _ASCII if _in_class(av, c)]))
+        elif op in (sre.MAX_REPEAT, sre.MIN_REPEAT):
+            low, high, sub = av
+            count = rng.randint(low, low + 3 if high is sre.MAXREPEAT else high)
+            out.extend(_draw_upstream(sub, rng) for _ in range(count))
+        elif op is sre.SUBPATTERN:
+            out.append(_draw_upstream(av[3], rng))
+        elif op is sre.BRANCH:
+            out.append(_draw_upstream(rng.choice(av[1]), rng))
+        elif op is sre.AT:
+            pass
+        else:
+            raise ValueError(f"no sampler for {op}")
+    return "".join(out)
+
+
+def test_upstream_sampler_draws_matches():
+    rng = random.Random(0)
+    for pattern in [r"^\d{2,4}$", r"^(PR|AB)\w+\.[^\s]?$", r"^.+?-[A-Z]{3}$"]:
+        assert all(re.fullmatch(pattern, _draw_upstream(sre_parse.parse(pattern), rng)) for _ in range(50))
+
+
 def test_rewrite_keeps_python_meaning_on_ascii():
     # For every rewritten registry pattern, the upstream pattern and its rewrite agree on
-    # printable-ASCII samples drawn from both: the only narrowing is non-ASCII (spec §5.2).
+    # ASCII samples drawn from each side and printable ones at random: the only narrowing is
+    # non-ASCII (spec §5.2).
     prefixes = json.loads((REGISTRY / "bioregistry.json").read_text(encoding="utf-8"))["prefixes"]
     rewritten = {p: s for p, s in prefixes.items() if s["rules"]}
     assert rewritten
     for prefix, scheme in sorted(rewritten.items()):
         seed = zlib.crc32(prefix.encode())
         rng = random.Random(seed)
-        inputs = samples(scheme["pattern"], 8, seed) + [_printable(rng) for _ in range(8)]
+        tree = sre_parse.parse(scheme["upstream_pattern"])
+        inputs = (
+            samples(scheme["pattern"], 8, seed)
+            + [_draw_upstream(tree, rng) for _ in range(8)]
+            + [_printable(rng) for _ in range(8)]
+        )
         upstream, dialect = re.compile(scheme["upstream_pattern"]), compile_pattern(scheme["pattern"])
         for s in inputs:
             assert bool(upstream.fullmatch(s)) is bool(dialect.fullmatch(s)), (prefix, s)
+
+
+def test_negated_shorthand_reason_is_not_only_non_ascii():
+    # Python's \s holds \x1c to \x1f, so the ASCII complement of \s would also accept ASCII
+    # characters Python's \S refuses.
+    assert re.fullmatch(r"\S", "\x1c") is None
+    for pattern in [r"^\S+$", r"^[^\s]+$"]:
+        with pytest.raises(RefsError) as e:
+            rewrite(pattern)
+        assert "non-ASCII" not in e.value.detail, e.value.detail

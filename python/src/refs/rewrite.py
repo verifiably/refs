@@ -44,7 +44,7 @@ _NEGATED_SHORTHAND = frozenset("DSW")
 _ASCII_LETTERS = frozenset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 _DIGITS = frozenset("0123456789")
 _PRINTABLE = [chr(c) for c in range(0x20, 0x7F)]
-_WIDENS = "has no dialect form: its ASCII complement would accept non-ASCII characters Python refuses"
+_WIDENS = "has no dialect form: its ASCII complement would accept characters Python refuses"
 
 
 @dataclass(frozen=True, slots=True)
@@ -227,7 +227,8 @@ class _Reader:
         """Read one class member; return its dialect spelling and its code point (None for a shorthand).
 
         A shorthand in a negated class is refused: its ASCII expansion there widens what the
-        class accepts (`[^\\w]` would take `é`), the same reason `\\W`, `\\D` and `\\S` are refused.
+        class accepts (`[^\\w]` would take `é`, `[^\\s]` the ASCII separator `\\x1c`), the same
+        reason `\\W`, `\\D` and `\\S` are refused.
         """
         start = self.i
         c = self.text[start]
