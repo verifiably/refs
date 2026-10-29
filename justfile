@@ -8,6 +8,7 @@
 # bin/tt) so the run is recorded. Design: ops docs/specs/2026-09-04-test-ci-audit-design.md.
 
 set quiet
+set positional-arguments
 
 tt := "python3 tools/tt"
 
