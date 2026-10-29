@@ -15,8 +15,7 @@ tt := "python3 tools/tt"
 # Two packages, so each command is written once per package and the whole-repo commands
 # below are composed from them. Recipes, hooks, and CI all run these, so none of the
 # three can drift from the others. Each is a subshell: `cd` must not leak to the next.
-# Avoid single quotes inside them. The ts commands are empty until the TypeScript package
-# lands, and are then composed into fast_cmd, test_cmd and check_cmd below.
+# Avoid single quotes inside them.
 # `pytest` is bare on purpose: pyproject's addopts already carries `-q`, and a second
 # `-q` is `-qq`, which drops the summary line the wrapper counts tests from.
 py_fast_cmd := "(cd python && uv run --frozen pytest --testmon)"
@@ -24,16 +23,18 @@ py_test_cmd := "(cd python && uv run --frozen pytest)"
 py_check_cmd := "(cd python && uv run --frozen ruff check . && uv run --frozen pyright src)"
 py_setup_cmd := "(cd python && uv sync --frozen)"
 
-ts_fast_cmd := ""
-ts_test_cmd := ""
-ts_check_cmd := ""
+ts_fast_cmd := "(cd ts && npm test -- --changed --passWithNoTests)"
+ts_test_cmd := "(cd ts && npm test)"
+ts_check_cmd := "(cd ts && npm run typecheck && npm run check)"
+ts_setup_cmd := "(cd ts && npm ci)"
 
-# The whole-repo commands are the python ones until the TypeScript package lands. `one_cmd`
-# runs inside python/, so its arguments are paths relative to python/.
-fast_cmd := py_fast_cmd
-test_cmd := py_test_cmd
-one_cmd := "cd python && uv run --frozen pytest"
-check_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && " + registry_check_cmd + " && " + py_check_cmd + " && tasks check"
+# `one_cmd` takes its runner arguments as "$@": a first argument of `ts` runs vitest in ts/
+# on the rest (paths relative to ts/); anything else goes to pytest in python/ (paths
+# relative to python/).
+fast_cmd := py_fast_cmd + " && " + ts_fast_cmd
+test_cmd := py_test_cmd + " && " + ts_test_cmd
+one_cmd := "if [ \"$1\" = ts ]; then shift; (cd ts && npx --no-install vitest run \"$@\"); else (cd python && uv run --frozen pytest \"$@\"); fi"
+check_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && " + registry_check_cmd + " && " + py_check_cmd + " && " + ts_check_cmd + " && tasks check"
 
 # registry/ is the one copy of the vendored registry; each package carries a gitignored copy
 # (python/src/refs/data/, ts/data/) that `registry-sync` writes and `registry-check` compares
@@ -52,11 +53,12 @@ setup_cmd := "common=\"$(git rev-parse --git-common-dir)\"; if [ \"$common\" != 
 test-fast:
     {{tt}} test-fast -- sh -c '{{fast_cmd}}'
 
-# One file, one test, or a filter, while working on it. Needs at least one argument;
-# the whole suite is `test`. The sh -c string never holds the arguments, so quotes, $
-# and globs in them reach the runner untouched.
+# One file, one test, or a filter, while working on it: `just test-one tests/test_dialect.py`
+# for pytest, `just test-one ts tests/dialect.test.ts` for vitest. Needs at least one
+# argument; the whole suite is `test`. The sh -c string never holds the arguments, so quotes,
+# $ and globs in them reach the runner untouched.
 test-one +args:
-    {{tt}} test-one -- sh -c '{{one_cmd}} "$@" 2>&1' test-one "$@"
+    {{tt}} test-one -- sh -c '{{one_cmd}} 2>&1' test-one "$@"
 
 # The full suite, both languages.
 test:
@@ -76,7 +78,7 @@ docs:
 # Make this checkout runnable. Run once after `git worktree add`; rerun after a
 # dependency change.
 setup:
-    {{tt}} setup -- sh -c '{{setup_cmd}} && {{py_setup_cmd}} && {{registry_sync_cmd}}'
+    {{tt}} setup -- sh -c '{{setup_cmd}} && {{py_setup_cmd}} && {{ts_setup_cmd}} && {{registry_sync_cmd}}'
 
 # Vendor a Bioregistry snapshot (the reduced bioregistry.json and its expected sha256) into
 # registry/ in the pattern dialect, then copy registry/ into the packages.
@@ -101,10 +103,9 @@ hook-pre-push:
 
 # CI keeps its two-job matrix once the packages land; each job runs the recipe for its
 # package, so the whole job is one recorded number. `tasks check` is not in them: the
-# `tasks` binary is not installed on a runner. The typescript recipe is empty until that
-# package lands.
+# `tasks` binary is not installed on a runner.
 ci-python:
     {{tt}} ci-python -- sh -c '{{py_test_cmd}} && {{py_check_cmd}}'
 
 ci-typescript:
-    {{tt}} ci-typescript -- sh -c 'true'
+    {{tt}} ci-typescript -- sh -c '{{ts_test_cmd}} && {{ts_check_cmd}}'
