@@ -22,7 +22,7 @@ tt := "python3 tools/tt"
 py_fast_cmd := "(cd python && uv run --frozen pytest --testmon)"
 py_test_cmd := "(cd python && uv run --frozen pytest)"
 py_check_cmd := "(cd python && uv run --frozen ruff check . && uv run --frozen pyright src)"
-py_setup_cmd := "(cd python && uv lock && uv sync --frozen)"
+py_setup_cmd := "(cd python && uv sync --frozen)"
 
 ts_fast_cmd := ""
 ts_test_cmd := ""

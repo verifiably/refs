@@ -16,7 +16,9 @@ a pattern the grammar accepted.
     class       = "[" [ "^" ] member-or-range { member-or-range } "]"
 
 The empty pattern, empty branches and empty groups are accepted. Digits in a quantifier
-are ASCII digits; m must not exceed n.
+are ASCII digits, at most five of them (leading zeros count), each bound at most 65535, and
+m must not exceed n. Groups nest at most 32 deep. Inside a class, the doubled unescaped
+characters `&&`, `~~` and `||` are refused: Python reserves them for set operations.
 """
 
 from __future__ import annotations
@@ -31,57 +33,66 @@ _CONTROL = {"t": "\t", "n": "\n", "v": "\v", "f": "\f", "r": "\r"}
 _OUTSIDE_ESCAPES = _SYNTAX | {"/"}
 _CLASS_ESCAPES = frozenset("\\][^-")
 _CLASS_PLAIN_EXCLUDED = frozenset("\\][^-")
+_CLASS_RESERVED_DOUBLES = frozenset("&~|")
 _DIGITS = frozenset("0123456789")
+_MAX_COUNT = 65535  # largest quantifier bound; above it the engines differ or Python refuses
+_MAX_DIGITS = len(str(_MAX_COUNT))  # a longer digit run is refused before any int conversion
+_MAX_DEPTH = 32  # deepest group nesting; keeps the recursive descent far from the recursion limit
 
 
 @dataclass(frozen=True, slots=True)
-class _Lit:
+class Lit:
     char: str
 
 
 @dataclass(frozen=True, slots=True)
-class _Anchor:
+class Anchor:
     kind: str  # "start" or "end"
 
 
 @dataclass(frozen=True, slots=True)
-class _Range:
+class Range:
     lo: str
     hi: str  # equal to lo for a single member
 
 
 @dataclass(frozen=True, slots=True)
-class _Class:
+class Class:
     negated: bool
-    items: tuple[_Range, ...]
+    items: tuple[Range, ...]
 
 
 @dataclass(frozen=True, slots=True)
-class _Group:
+class Group:
     capturing: bool
-    body: _Alt
+    body: Alt
 
 
 @dataclass(frozen=True, slots=True)
-class _Repeat:
-    child: _Lit | _Class | _Group
+class Repeat:
+    child: Lit | Class | Group
     min: int
     max: int | None  # None is unbounded
     lazy: bool
 
 
 @dataclass(frozen=True, slots=True)
-class _Seq:
-    items: tuple[_Lit | _Anchor | _Class | _Group | _Repeat, ...]
+class Seq:
+    items: tuple[Lit | Anchor | Class | Group | Repeat, ...]
 
 
 @dataclass(frozen=True, slots=True)
-class _Alt:
-    branches: tuple[_Seq, ...]
+class Alt:
+    branches: tuple[Seq, ...]
 
 
-Ast = _Alt
-"""The parsed pattern: an alternation of sequences. Node types are private to refs."""
+Ast = Alt
+"""The parsed pattern: an alternation of sequences.
+
+`Lit`, `Anchor`, `Range`, `Class`, `Group`, `Repeat`, `Seq` and `Alt` are package-internal:
+refs' own modules (rewriting, sample generation) walk them; they are not re-exported from
+`refs` and not part of its public API.
+"""
 
 
 def _refuse(detail: str, position: int) -> RefsError:
@@ -103,41 +114,41 @@ class _Parser:
             raise _refuse("unmatched )", self.i)
         return body
 
-    def alternation(self, depth: int) -> _Alt:
+    def alternation(self, depth: int) -> Alt:
         branches = [self.sequence(depth)]
         while self.peek() == "|":
             self.i += 1
             branches.append(self.sequence(depth))
-        return _Alt(tuple(branches))
+        return Alt(tuple(branches))
 
-    def sequence(self, depth: int) -> _Seq:
-        items: list[_Lit | _Anchor | _Class | _Group | _Repeat] = []
+    def sequence(self, depth: int) -> Seq:
+        items: list[Lit | Anchor | Class | Group | Repeat] = []
         while True:
             c = self.peek()
             if c is None or c == "|" or (c == ")" and depth > 0):
-                return _Seq(tuple(items))
+                return Seq(tuple(items))
             if c == ")":
                 raise _refuse("unmatched )", self.i)
             if c == "^":
                 if self.i != 0:
                     raise _refuse("^ is allowed only at the start of the pattern", self.i)
                 self.i += 1
-                items.append(_Anchor("start"))
+                items.append(Anchor("start"))
             elif c == "$":
                 if self.i != self.n - 1:
                     raise _refuse("$ is allowed only at the end of the pattern", self.i)
                 self.i += 1
-                items.append(_Anchor("end"))
+                items.append(Anchor("end"))
             else:
                 atom = self.atom(depth)
                 items.append(self.quantified(atom))
 
-    def atom(self, depth: int) -> _Lit | _Class | _Group:
+    def atom(self, depth: int) -> Lit | Class | Group:
         c = self.text[self.i]
         if c in "?*+{":
             raise _refuse(f"nothing to quantify before {c!r}", self.i)
         if c == "\\":
-            return _Lit(self.escape(in_class=False))
+            return Lit(self.escape(in_class=False))
         if c == "[":
             return self.char_class()
         if c == "(":
@@ -145,7 +156,7 @@ class _Parser:
         if c in _SYNTAX:
             raise _refuse(f"unescaped {c!r} is outside the dialect", self.i)
         self.i += 1
-        return _Lit(c)
+        return Lit(c)
 
     def escape(self, *, in_class: bool) -> str:
         """Consume a backslash escape; return the code point it denotes."""
@@ -162,7 +173,9 @@ class _Parser:
             return c
         raise _refuse(f"escape \\{c} is outside the dialect", start)
 
-    def group(self, depth: int) -> _Group:
+    def group(self, depth: int) -> Group:
+        if depth >= _MAX_DEPTH:
+            raise _refuse(f"groups nest at most {_MAX_DEPTH} deep", self.i)
         self.i += 1  # (
         capturing = True
         if self.peek() == "?":
@@ -174,15 +187,15 @@ class _Parser:
         if self.peek() != ")":
             raise _refuse("unclosed group", self.i)
         self.i += 1
-        return _Group(capturing, body)
+        return Group(capturing, body)
 
-    def char_class(self) -> _Class:
+    def char_class(self) -> Class:
         self.i += 1  # [
         negated = False
         if self.peek() == "^":
             negated = True
             self.i += 1
-        items: list[_Range] = []
+        items: list[Range] = []
         while True:
             c = self.peek()
             if c is None:
@@ -191,7 +204,7 @@ class _Parser:
                 if not items:
                     raise _refuse("a class holds at least one member", self.i)
                 self.i += 1
-                return _Class(negated, tuple(items))
+                return Class(negated, tuple(items))
             first_at = self.i
             lo = self.member()
             hi = lo
@@ -203,7 +216,7 @@ class _Parser:
                 hi = self.member()
                 if lo > hi:
                     raise _refuse("range is reversed", first_at)
-            items.append(_Range(lo, hi))
+            items.append(Range(lo, hi))
 
     def member(self) -> str:
         c = self.peek()
@@ -213,10 +226,12 @@ class _Parser:
             return self.escape(in_class=True)
         if c in _CLASS_PLAIN_EXCLUDED:
             raise _refuse(f"unescaped {c!r} is not a class member here", self.i)
+        if c in _CLASS_RESERVED_DOUBLES and self.i > 0 and self.text[self.i - 1] == c:
+            raise _refuse(f"doubled {c!r} in a class is reserved for set operations", self.i)
         self.i += 1
         return c
 
-    def quantified(self, atom: _Lit | _Class | _Group) -> _Lit | _Class | _Group | _Repeat:
+    def quantified(self, atom: Lit | Class | Group) -> Lit | Class | Group | Repeat:
         c = self.peek()
         if c is None or c not in "?*+{":
             return atom
@@ -228,7 +243,7 @@ class _Parser:
         lazy = self.peek() == "?"
         if lazy:
             self.i += 1
-        return _Repeat(atom, lo, hi, lazy)
+        return Repeat(atom, lo, hi, lazy)
 
     def braces(self) -> tuple[int, int | None]:
         start = self.i
@@ -251,7 +266,12 @@ class _Parser:
             self.i += 1
         if j == self.i:
             raise _refuse("malformed quantifier", start)
-        return int(self.text[j : self.i])
+        if self.i - j > _MAX_DIGITS:
+            raise _refuse(f"quantifier bound has more than {_MAX_DIGITS} digits", start)
+        value = int(self.text[j : self.i])
+        if value > _MAX_COUNT:
+            raise _refuse(f"quantifier bound exceeds {_MAX_COUNT}", start)
+        return value
 
 
 def parse_pattern(pattern: str) -> Ast:
