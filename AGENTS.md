@@ -11,10 +11,12 @@ where `../nodes/python/pyproject.toml` is missing. Run it right after `git workt
 
 ## Gates
 
-- `just test-one <args>`: no test runner is wired yet, so it fails on purpose.
-- `just test-fast`, `just test`: select nothing and pass until the packages land.
-- `just check`: `ops-check`, `ops-docs check` and `tasks check`. `just gate` is `check`
-  then `test`.
+- `just test-one <args>`: pytest in `python/`, so paths are relative to it
+  (`just test-one tests/test_dialect.py`). The TypeScript package is not wired yet.
+- `just test-fast`: affected-only (pytest-testmon). `just test`: the full suite. Both
+  cover Python only until the TypeScript package lands.
+- `just check`: `ops-check`, `ops-docs check`, ruff and pyright on `python/`, and
+  `tasks check`. `just gate` is `check` then `test`.
 - The hooks in `.githooks/` run the same commands; the full suite runs at pre-push, as no
   CI is configured. Every recipe runs through `tools/tt`; do not call a test runner
   directly.

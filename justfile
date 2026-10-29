@@ -15,23 +15,25 @@ tt := "python3 tools/tt"
 # Two packages, so each command is written once per package and the whole-repo commands
 # below are composed from them. Recipes, hooks, and CI all run these, so none of the
 # three can drift from the others. Each is a subshell: `cd` must not leak to the next.
-# Avoid single quotes inside them. Both packages are empty until their tasks land: the
-# python commands arrive with the Python package and the ts commands with the TypeScript
-# one, and each is then composed into fast_cmd, test_cmd and check_cmd below.
-py_fast_cmd := ""
-py_test_cmd := ""
-py_check_cmd := ""
+# Avoid single quotes inside them. The ts commands are empty until the TypeScript package
+# lands, and are then composed into fast_cmd, test_cmd and check_cmd below.
+# `pytest` is bare on purpose: pyproject's addopts already carries `-q`, and a second
+# `-q` is `-qq`, which drops the summary line the wrapper counts tests from.
+py_fast_cmd := "(cd python && uv run --frozen pytest --testmon)"
+py_test_cmd := "(cd python && uv run --frozen pytest)"
+py_check_cmd := "(cd python && uv run --frozen ruff check . && uv run --frozen pyright src)"
+py_setup_cmd := "(cd python && uv lock && uv sync --frozen)"
 
 ts_fast_cmd := ""
 ts_test_cmd := ""
 ts_check_cmd := ""
 
-# No test runner exists yet, so the whole-repo suite commands select nothing and pass.
-# `one_cmd` fails instead: a focused run of a test that cannot exist is not a result.
-fast_cmd := "true"
-test_cmd := "true"
-one_cmd := "false"
-check_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && tasks check"
+# The whole-repo commands are the python ones until the TypeScript package lands. `one_cmd`
+# runs inside python/, so its arguments are paths relative to python/.
+fast_cmd := py_fast_cmd
+test_cmd := py_test_cmd
+one_cmd := "cd python && uv run --frozen pytest"
+check_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && " + py_check_cmd + " && tasks check"
 
 # What a fresh checkout or worktree needs before the suite can run. Sibling path
 # dependencies (../nodes) resolve against the physical checkout dir. In a task worktree
@@ -66,7 +68,7 @@ docs:
 # Make this checkout runnable. Run once after `git worktree add`; rerun after a
 # dependency change.
 setup:
-    {{tt}} setup -- sh -c '{{setup_cmd}}'
+    {{tt}} setup -- sh -c '{{setup_cmd}} && {{py_setup_cmd}}'
 
 # What the pre-commit hook runs: `check`'s command under its own hook target.
 hook-pre-commit:
@@ -78,9 +80,10 @@ hook-pre-push:
 
 # CI keeps its two-job matrix once the packages land; each job runs the recipe for its
 # package, so the whole job is one recorded number. `tasks check` is not in them: the
-# `tasks` binary is not installed on a runner. Empty until the packages land.
+# `tasks` binary is not installed on a runner. The typescript recipe is empty until that
+# package lands.
 ci-python:
-    {{tt}} ci-python -- sh -c 'true'
+    {{tt}} ci-python -- sh -c '{{py_test_cmd}} && {{py_check_cmd}}'
 
 ci-typescript:
     {{tt}} ci-typescript -- sh -c 'true'
