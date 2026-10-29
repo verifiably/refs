@@ -31,7 +31,11 @@ ts_setup_cmd := "(cd ts && npm ci)"
 # `one_cmd` takes its runner arguments as "$@": a first argument of `ts` runs vitest in ts/
 # on the rest (paths relative to ts/); anything else goes to pytest in python/ (paths
 # relative to python/).
-fast_cmd := py_fast_cmd + " && " + ts_fast_cmd
+# testmon and `vitest --changed` follow code, not the files tests read, so an edit under
+# `data_paths` alone would select nothing: while git shows one uncommitted, `fast_cmd` runs
+# the full suite instead. A failing `git status` fails the run rather than reading as clean.
+data_paths := "fixtures registry"
+fast_cmd := "changed=$(git status --porcelain -- " + data_paths + ") || exit 1; if [ -n \"$changed\" ]; then echo \"test-fast: uncommitted change under " + data_paths + "; running the full suite\" >&2; " + test_cmd + "; else " + py_fast_cmd + " && " + ts_fast_cmd + "; fi"
 test_cmd := py_test_cmd + " && " + ts_test_cmd
 one_cmd := "if [ \"$1\" = ts ]; then shift; (cd ts && npx --no-install vitest run \"$@\"); else (cd python && uv run --frozen pytest \"$@\"); fi"
 check_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && " + registry_check_cmd + " && " + py_check_cmd + " && " + ts_check_cmd + " && tasks check"
