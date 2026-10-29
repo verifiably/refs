@@ -21,8 +21,10 @@ where `../nodes/python/pyproject.toml` is missing, then copies `registry/` into 
 - `just test-one <args>`: pytest in `python/`, so paths are relative to it
   (`just test-one tests/test_dialect.py`); with `ts` first, vitest in `ts/`
   (`just test-one ts tests/dialect.test.ts`).
-- `just test-fast`: affected-only (pytest-testmon, then `vitest --changed`). `just test`:
-  the full suite, both languages (the TypeScript run builds the package first).
+- `just test-fast`: affected-only (pytest-testmon, then `vitest --changed`), except that
+  an uncommitted change under `fixtures/` or `registry/` runs the full suite, since neither
+  selector follows the data files tests read. `just test`: the full suite, both languages
+  (the TypeScript run builds the package first).
 - `just check`: `ops-check`, `ops-docs check`, `registry-check`, ruff and pyright on
   `python/`, `tsc` and biome on `ts/`, and `tasks check`. `just gate` is `check` then `test`.
 - The hooks in `.githooks/` run the same commands; the full suite runs at pre-push, as no
