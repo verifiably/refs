@@ -35,7 +35,10 @@ where `../nodes/python/pyproject.toml` is missing, then copies `registry/` into 
   `registry/SOURCES.toml` and the shared `registry/local-schemes.toml`; the one copy.
   `just registry-sync` copies it into `python/src/refs/data/` and `ts/data/` (gitignored),
   and `registry-check` compares the copies with it.
-- `.githooks/`: git hooks; a fresh clone runs `git config core.hooksPath .githooks`.
+- `.githooks/`: git hooks; a fresh clone runs `git config core.hooksPath .githooks`. Beside
+  the pre-commit and pre-push gates, `post-merge` and `post-checkout` run `just registry-sync`
+  (post-checkout only on a branch checkout), so a merge or checkout that changes `registry/`
+  does not leave the gitignored data copies stale for editable consumers.
 
 ## Rules
 

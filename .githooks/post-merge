@@ -1,0 +1,6 @@
+#!/bin/sh
+# Installed by `git config core.hooksPath .githooks`. A merge (or pull) can change
+# registry/, and the packages' gitignored copies of it (python/src/refs/data/, ts/data/)
+# would then serve the old grammar to every editable consumer. Resync them. Git ignores
+# this hook's exit status, so a failure is only reported: run `just registry-sync` by hand.
+exec just registry-sync

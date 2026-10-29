@@ -1,0 +1,11 @@
+#!/bin/sh
+# Installed by `git config core.hooksPath .githooks`. Arguments: previous HEAD, new HEAD,
+# and 1 for a branch checkout or 0 for a file checkout. A branch checkout can change
+# registry/, so resync the packages' gitignored copies of it (python/src/refs/data/,
+# ts/data/); a file checkout (`git checkout -- path`) changes no branch and is skipped.
+# Git ignores this hook's exit status, so a failure is only reported: run
+# `just registry-sync` by hand. `git worktree add` runs this hook too, in the new
+# worktree, before `just setup` has run: the sync then creates the data directories, which
+# is harmless.
+[ "$3" = 1 ] || exit 0
+exec just registry-sync

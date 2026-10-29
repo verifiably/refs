@@ -261,6 +261,10 @@ refused scheme stays in the registry (its prefix is known) but every id under it
 `ts/data/`) written by `just registry-sync` and shipped in the built package. The gate's
 `registry-check` compares each copy with `registry/` by SHA-256 and fails on a copy that
 is missing, extra or different. Both packages therefore read the same bytes.
+The copies go stale when a merge or checkout changes `registry/`, and an editable
+consumer would then read the old grammar; the `post-merge` and `post-checkout` hooks in
+`.githooks/` therefore run `just registry-sync` (post-checkout only on a branch
+checkout).
 
 ### 4.4 Shared local schemes
 
