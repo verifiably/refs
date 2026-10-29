@@ -1,24 +1,34 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
 from refs import LocalScheme, RefsError, Registry
 from refs.vocab import Vocabulary, load_vocabularies, parse_vocabularies
 
-REG = Registry.default().with_local([LocalScheme("lit.topic-c", "topic", "^[A-Z]+$", None, "test", "lit")])
+FIXTURES = Path(__file__).parents[2] / "fixtures"
+DOC = json.loads((FIXTURES / "vocabularies.json").read_text(encoding="utf-8"))
+REG = Registry.default().with_local(
+    [LocalScheme(s["prefix"], s["name"], s["pattern"], s["uri_format"], s["why"], s["issued_by"]) for s in DOC["local_schemes"]]
+)
 
 
-def test_parse_vocabularies_reads_the_spec_example():
-    table = {
-        "hgnc.symbol": {"issuer": "external", "release": "2026-07-01", "accepted": ["2026-04-01"]},
-        "openalex.topic": {"issuer": "external", "release": "2026-06-26"},
-        "lit.topic-c": {"issuer": "self", "release": "run:1"},
-    }
-    assert parse_vocabularies(table, REG) == {
-        "hgnc.symbol": Vocabulary("hgnc.symbol", "external", "2026-07-01", ("2026-04-01",)),
-        "openalex.topic": Vocabulary("openalex.topic", "external", "2026-06-26", ()),
-        "lit.topic-c": Vocabulary("lit.topic-c", "self", "run:1", ()),
-    }
+def test_vocabularies_oracle_accepted():
+    for case in DOC["accepted"]:
+        expected = {
+            prefix: Vocabulary(prefix, v["issuer"], v["release"], tuple(v["accepted"]))
+            for prefix, v in case["expected"].items()
+        }
+        assert parse_vocabularies(case["table"], REG) == expected, case["name"]
+
+
+@pytest.mark.parametrize("case", DOC["refused"], ids=lambda c: c["name"])
+def test_vocabularies_oracle_refused(case):
+    with pytest.raises(RefsError) as e:
+        parse_vocabularies(case["table"], REG)
+    assert e.value.kind == "invalid_vocabulary"
 
 
 def test_vocabulary_is_frozen():
@@ -26,31 +36,8 @@ def test_vocabulary_is_frozen():
         Vocabulary("a", "external", "r", ()).release = "x"  # type: ignore[misc]
 
 
-@pytest.mark.parametrize(
-    "table",
-    [
-        {"hgnc.symbol": {"issuer": "external", "release": ""}},
-        {"hgnc.symbol": {"issuer": "external", "release": 1}},
-        {"hgnc.symbol": {"issuer": "external"}},
-        {"hgnc.symbol": {"release": "a"}},
-        {"hgnc.symbol": {"issuer": "other", "release": "a"}},
-        {"hgnc.symbol": {"issuer": "external", "release": "a", "accepted": ["b", "b"]}},
-        {"hgnc.symbol": {"issuer": "external", "release": "a", "accepted": ["a"]}},
-        {"hgnc.symbol": {"issuer": "external", "release": "a", "accepted": [""]}},
-        {"hgnc.symbol": {"issuer": "external", "release": "a", "accepted": "b"}},
-        {"hgnc.symbol": {"issuer": "self", "release": "a"}},  # self needs a self-issued local scheme
-        {"openalex.topic": {"issuer": "self", "release": "a"}},  # local, but not self-issued
-        {"lit.topic-c": {"issuer": "external", "release": "a"}},  # self-issued, declared external
-        {"nope": {"issuer": "external", "release": "a"}},  # unknown prefix
-        {"HGNC.SYMBOL": {"issuer": "external", "release": "a"}},  # not the canonical spelling
-        {"hgnc.symbol": {"issuer": "external", "release": "a", "extra": 1}},
-        {"hgnc.symbol": "external"},
-    ],
-)
-def test_vocabulary_refusals(table):
-    with pytest.raises(RefsError) as e:
-        parse_vocabularies(table, REG)
-    assert e.value.kind == "invalid_vocabulary"
+def test_releases_are_the_current_and_the_accepted():
+    assert Vocabulary("a", "external", "c", ("b", "a")).releases == {"a", "b", "c"}
 
 
 def test_load_vocabularies_reads_toml(tmp_path):

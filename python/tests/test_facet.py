@@ -49,22 +49,6 @@ def test_error_names_the_first_violation():
     assert "mesh:D009101" in str(e.value) and "KIF14" not in str(e.value)
 
 
-@pytest.mark.parametrize(
-    "payload",
-    [
-        {"entries": "mesh:D009101"},
-        {"entries": [{"id": 1}]},
-        {"entries": [{"id": "mesh:D009101", "release": None}]},
-        {"entries": [{"id": "hgnc.symbol:KIF14", "release": 20260701}]},
-        {"entries": [{}]},
-        {},
-    ],
-)
-def test_malformed_payloads_are_facet_errors(payload):
-    with pytest.raises(FacetError):
-        INVARIANT(node({FACET: payload}))
-
-
 def test_build_about_canonicalises_and_orders():
     payload = build_about([("PMID:2", None), ("pubmed:1", None), ("pmid:2", None)], REG)
     assert payload == {"entries": [{"id": "pubmed:1"}, {"id": "pubmed:2"}]}

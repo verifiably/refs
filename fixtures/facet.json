@@ -101,6 +101,42 @@
       "reason": "entries must be non-empty"
     },
     {
+      "name": "a null release",
+      "payload": {"entries": [{"id": "mesh:D009101", "release": null}]},
+      "verdict": "refused",
+      "reason": "release is a string; leave it out for none"
+    },
+    {
+      "name": "a numeric release",
+      "payload": {"entries": [{"id": "hgnc.symbol:KIF14", "release": 20260701}]},
+      "verdict": "refused",
+      "reason": "release is a string"
+    },
+    {
+      "name": "a numeric id",
+      "payload": {"entries": [{"id": 1}]},
+      "verdict": "refused",
+      "reason": "id is a string"
+    },
+    {
+      "name": "an empty entry",
+      "payload": {"entries": [{}]},
+      "verdict": "refused",
+      "reason": "id is required"
+    },
+    {
+      "name": "a payload without entries",
+      "payload": {},
+      "verdict": "refused",
+      "reason": "entries is required"
+    },
+    {
+      "name": "entries as a string",
+      "payload": {"entries": "mesh:D009101"},
+      "verdict": "refused",
+      "reason": "entries is a list"
+    },
+    {
       "name": "an unknown key at the top",
       "payload": {"entries": [{"id": "mesh:D009101"}], "extra": 1},
       "verdict": "refused",
