@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from nodes.core.errors import FacetError
+from nodes.core.frontmatter import node_from_markdown
 from nodes.core.node import Node
 
 from refs import LocalScheme, RefsError, Registry
@@ -78,3 +79,34 @@ def test_build_about_does_not_check_releases():
     assert build_about([("mesh:D009101", "anything")], REG) == {
         "entries": [{"id": "mesh:D009101", "release": "anything"}]
     }
+
+
+# nodes reads stored YAML with a YAML 1.1 parser (nodes STANDARD section 13): an unquoted
+# date-shaped scalar is a date, not a string. A release is a string (STANDARD section 6), so
+# it must be quoted wherever it is stored. This pins the limitation so it cannot pass silently.
+def _stored_node(release_text: str) -> Node:
+    return node_from_markdown(
+        "---\n"
+        "id: topic:t\n"
+        "uid: u1\n"
+        "kind: topic\n"
+        "title: t\n"
+        "facets:\n"
+        "  refs/about:\n"
+        "    entries:\n"
+        "      - id: openalex.topic:T1\n"
+        f"        release: {release_text}\n"
+        "---\n"
+    )
+
+
+def test_a_quoted_date_shaped_release_read_from_stored_yaml_validates():
+    INVARIANT(_stored_node('"2026-06-26"'))
+
+
+def test_an_unquoted_date_shaped_release_read_from_stored_yaml_is_refused():
+    stored = _stored_node("2026-06-26")
+    assert not isinstance(stored.facets[FACET]["entries"][0]["release"], str)
+    with pytest.raises(FacetError) as e:
+        INVARIANT(stored)
+    assert "topic:t" in str(e.value) and FACET in str(e.value)

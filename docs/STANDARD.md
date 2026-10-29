@@ -416,6 +416,12 @@ its parsed declarations (§5).
   declaration's `release` or one of its `accepted`; if it has none, `release` is refused.
   A release belongs to the reference, not the prefix: one prefix may appear at different
   releases in one payload, and the same id may appear at two releases.
+  A release is a string wherever it is stored: a date-shaped one is quoted in stored YAML
+  (`release: "2026-06-26"`). nodes reads stored YAML with a YAML 1.1 parser, which turns an
+  unquoted `release: 2026-06-26` into a date (nodes STANDARD section 13, "YAML 1.1
+  scalars"), and the strict `release` type then refuses it; so a node written unquoted by
+  nodes' TypeScript writer fails the invariant when Python reads it back. A suite pins the
+  quoted form valid and the unquoted form refused (`python/tests/test_facet.py`).
 - **Order.** Entries are unique by `(id, release)` and strictly sorted by `id`, then
   `release` (absent first), both compared by **Unicode code point**, never UTF-16 code
   unit or locale. A duplicate and a misordered pair are both refused. The fixture pins
