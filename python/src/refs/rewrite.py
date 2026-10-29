@@ -5,8 +5,10 @@ constructs Bioregistry uses, and emits it in the dialect (spec section 5.2). It 
 different grammar from `refs.dialect`'s strict one: it accepts what Python accepts and
 decides, construct by construct, whether the dialect can say the same thing. Every rule it
 applies keeps Python's meaning under full match, except the recorded ASCII narrowing of
-`\\d`, `\\w` and `\\s`. A construct with no dialect form raises `unsupported_pattern`, and
-so does a rewrite the strict checker still refuses.
+`\\d`, `\\w` and `\\s` in a positive context. Negated forms (`\\D`, `\\S`, `\\W`, and a
+shorthand inside `[^...]`) would widen instead, so they are refused. A construct with no
+dialect form raises `unsupported_pattern`, and so does a rewrite the strict checker still
+refuses.
 
 Rules, by the name recorded in `Rewritten.rules`:
 
@@ -42,6 +44,7 @@ _NEGATED_SHORTHAND = frozenset("DSW")
 _ASCII_LETTERS = frozenset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 _DIGITS = frozenset("0123456789")
 _PRINTABLE = [chr(c) for c in range(0x20, 0x7F)]
+_WIDENS = "has no dialect form: its ASCII complement would accept non-ASCII characters Python refuses"
 
 
 @dataclass(frozen=True, slots=True)
@@ -167,11 +170,7 @@ class _Reader:
 
     def refuse_escape(self, c: str, start: int) -> None:
         if c in _NEGATED_SHORTHAND:
-            raise _refuse(
-                f"negated shorthand \\{c} has no dialect form: its ASCII complement would accept"
-                " non-ASCII characters Python refuses",
-                start,
-            )
+            raise _refuse(f"negated shorthand \\{c} {_WIDENS}", start)
         if c in _DIGITS:
             raise _refuse(f"backreference or octal escape \\{c} is outside the dialect", start)
         if c in _ASCII_LETTERS:
@@ -198,7 +197,8 @@ class _Reader:
         start = self.i
         self.i += 1
         out = "["
-        if self.peek() == "^":
+        negated = self.peek() == "^"
+        if negated:
             self.i += 1
             out += "^"
         first = True
@@ -209,12 +209,12 @@ class _Reader:
             if c == "]" and not first:
                 self.i += 1
                 return out + "]"
-            lo_text, lo_char = self.member(first)
+            lo_text, lo_char = self.member(negated)
             first = False
             if self.peek() == "-" and self.peek(1) is not None and self.peek(1) != "]":
                 dash = self.i
                 self.i += 1
-                hi_text, hi_char = self.member(False)
+                hi_text, hi_char = self.member(negated)
                 if lo_char is None or hi_char is None:
                     raise _refuse("a shorthand class cannot bound a range", dash)
                 if lo_char > hi_char:
@@ -223,8 +223,12 @@ class _Reader:
             else:
                 out += lo_text
 
-    def member(self, first: bool) -> tuple[str, str | None]:
-        """Read one class member; return its dialect spelling and its code point (None for a shorthand)."""
+    def member(self, negated: bool) -> tuple[str, str | None]:
+        """Read one class member; return its dialect spelling and its code point (None for a shorthand).
+
+        A shorthand in a negated class is refused: its ASCII expansion there widens what the
+        class accepts (`[^\\w]` would take `é`), the same reason `\\W`, `\\D` and `\\S` are refused.
+        """
         start = self.i
         c = self.text[start]
         if c != "\\":
@@ -242,6 +246,8 @@ class _Reader:
         if e in _CONTROL:
             return "\\" + e, _CONTROL[e]
         if e in _SHORTHAND:
+            if negated:
+                raise _refuse(f"shorthand \\{e} in a negated class {_WIDENS}", start)
             members, rule = _SHORTHAND[e]
             self.rules.add(rule)
             return members, None

@@ -51,6 +51,7 @@ def test_a_pattern_already_in_the_dialect_is_unchanged():
 @pytest.mark.parametrize("upstream", [
     r"^(?i:ab)$", r"^\S+$", r"^\D{4}$", r"^\W$", r"^[\S]$", r"^(?=a)a$",
     r"^(a$)+$", r"^a$|b", r"^(?P<x>a)$", r"^a\b$", r"^\1$", r"^a{,3}$", r"^a++$", r"^[&&]$",
+    r"^[^\w]$", r"^[^\d]$", r"^[^\s]$",   # a shorthand in a negated class would widen, like \W \D \S
 ])
 def test_unrewritable(upstream):
     with pytest.raises(RefsError) as e:
