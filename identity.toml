@@ -1,0 +1,11 @@
+# What this project is. `tools/ops-docs write` renders it into the identity region of
+# README.md and AGENTS.md; `tools/ops-docs check` refuses a commit while they differ.
+# Design: ops docs/specs/2026-09-22-project-guides-design.md §3.
+name = "refs"
+aliases = []
+purpose = "Vocabulary identifiers pinned to releases: the reference layer above nodes"
+abstract = """
+A facet (refs/about) that lets a node carry identifiers drawn from vocabularies, with a CURIE grammar parsed against a pinned Bioregistry release and each identifier optionally pinned to a vocabulary release. Python and TypeScript over one shared format, layered above nodes and below the domain profiles. refs only parses, validates and records identifiers; resolving one is quarry's job.
+"""
+authority = []
+subsystems = []

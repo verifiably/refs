@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.venv
+node_modules/
+ts/dist/
+
+# Fallback test-timing log, written by tools/tt when the shared log is unwritable and
+# emptied by ops `tt-report`; never committed.
+.tt/
+# pytest-testmon's per-checkout selection database, rebuilt on demand.
+.testmondata*
