@@ -185,3 +185,12 @@ def test_missing_data_names_the_sync_recipe(monkeypatch, tmp_path):
     monkeypatch.setattr(refs.registry.resources, "files", lambda _package: tmp_path)
     with pytest.raises(FileNotFoundError, match="just registry-sync"):
         refs.registry._data("bioregistry.json")
+
+
+def test_europepmc_scheme_preserves_provider_identity():
+    scheme = DEFAULT.scheme("europepmc")
+    assert (scheme.prefix, scheme.name, scheme.pattern, scheme.uri_format) == (
+        "europepmc", "Europe PMC record", r"^[A-Z]+/[A-Za-z0-9][A-Za-z0-9._\-]*$",
+        "https://europepmc.org/article/$1",
+    )
+    assert scheme.synonyms == () and scheme.issued_by is None

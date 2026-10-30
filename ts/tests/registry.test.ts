@@ -178,7 +178,7 @@ describe("membership and lookup", () => {
   test("every shared local scheme is in the default registry", () => {
     const text = readFileSync(new URL("../../registry/local-schemes.toml", import.meta.url), "utf-8");
     const prefixes = [...text.matchAll(/^\[schemes\.("?)([^\]"]+)\1\]$/gm)].map((m) => m[2]);
-    expect(prefixes.sort()).toEqual(["figshare", "openalex.topic"]);
+    expect(prefixes.sort()).toEqual(["europepmc", "figshare", "openalex.topic"]);
     for (const prefix of prefixes) {
       const scheme = DEFAULT.scheme(prefix);
       expect(DEFAULT.isLocal(prefix) && !DEFAULT.isUpstream(prefix)).toBe(true);
@@ -220,4 +220,16 @@ describe("the shared local schemes table", () => {
   test("refuses a non-table entry", () => {
     expect(() => localSchemesFromTable({ "x.y": "text" })).toThrow(/x\.y/);
   });
+});
+
+test("Europe PMC preserves provider source/id identity", () => {
+  const scheme = DEFAULT.scheme("europepmc");
+  expect([scheme.prefix, scheme.name, scheme.pattern, scheme.uriFormat, scheme.synonyms, scheme.issuedBy]).toEqual([
+    "europepmc",
+    "Europe PMC record",
+    "^[A-Z]+/[A-Za-z0-9][A-Za-z0-9._\\-]*$",
+    "https://europepmc.org/article/$1",
+    [],
+    null,
+  ]);
 });

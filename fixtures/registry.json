@@ -1,6 +1,6 @@
 {
   "version": "0.15.3",
-  "fingerprint": "f24db0182db3e55ac4bae5fc401a435a3e48dfd88d852218da14d2f49597835a",
+  "fingerprint": "79131117562370cb1a8f80aa71b3e952c496c00492e961dbcfebb799f2efcb09",
   "lookups": [
     ["geo", "geo"],
     ["GEO", "geo"],
@@ -17,11 +17,14 @@
     ["OpenAlex.Topic", "openalex.topic"],
     ["figshare", "figshare"],
     ["FIGSHARE", "figshare"],
+    ["europepmc", "europepmc"],
+    ["EUROPEPMC", "europepmc"],
     ["nope", null],
     ["", null],
     [" geo", null]
   ],
   "collisions": [
+    {"schemes": [{"prefix": "europepmc"}], "expected": [["europepmc", "repeated"]]},
     {"schemes": [], "expected": []},
     {"schemes": [{"prefix": "lit.x", "issued_by": "lit"}], "expected": []},
     {"schemes": [{"prefix": "geo"}], "expected": [["geo", "shadows_registry"]]},

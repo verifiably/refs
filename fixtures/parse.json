@@ -23,5 +23,16 @@
   {"text": "geo:GSE1:2", "error": "malformed"},
   {"text": "vegbank:VB.ds.1", "error": "unsupported_pattern"},
   {"text": "VegBank:anything", "error": "unsupported_pattern"},
-  {"text": "aaindex:anything at all", "canonical": "aaindex:anything at all"}
+  {"text": "aaindex:anything at all", "canonical": "aaindex:anything at all"},
+  {"text": "europepmc:MED/22253597", "canonical": "europepmc:MED/22253597"},
+  {"text": "europepmc:PMC/PMC3257301", "canonical": "europepmc:PMC/PMC3257301"},
+  {"text": "EUROPEPMC:PPR/PPR404258", "canonical": "europepmc:PPR/PPR404258"},
+  {"text": "europepmc:ETH/a-b.c_d", "canonical": "europepmc:ETH/a-b.c_d"},
+  {"text": "europepmc:med/22253597", "error": "malformed"},
+  {"text": "europepmc:/22253597", "error": "malformed"},
+  {"text": "europepmc:MED/", "error": "malformed"},
+  {"text": "europepmc:MED/a/b", "error": "malformed"},
+  {"text": "europepmc:MED/a b", "error": "malformed"},
+  {"text": "europepmc:MED/a?b", "error": "malformed"},
+  {"text": "europepmc:MED/a\n", "error": "malformed"}
 ]

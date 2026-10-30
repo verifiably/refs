@@ -12,3 +12,9 @@ name = "figshare"
 pattern = "^[0-9]+$"
 uri_format = "https://figshare.com/articles/dataset/_/$1"
 why = "Bioregistry has no figshare prefix (checked 2026-10-10); items are numbered and resolve by number. Moved from quarry's catalog, where the pattern was ^\\d+$"
+
+[schemes.europepmc]
+name = "Europe PMC record"
+pattern = '^[A-Z]+/[A-Za-z0-9][A-Za-z0-9._\-]*$'
+uri_format = "https://europepmc.org/article/$1"
+why = "Provider source/id identity for round-trip Europe PMC lookup; the pinned Bioregistry snapshot has per-source schemes but no scheme for this pair"

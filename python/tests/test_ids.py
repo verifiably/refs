@@ -93,7 +93,7 @@ def test_identifier_modules_do_not_import_nodes(tmp_path):
 
 def test_every_shared_local_scheme_is_in_the_default_registry(registry):
     shared = tomllib.loads((FIXTURES.parent / "registry" / "local-schemes.toml").read_text(encoding="utf-8"))["schemes"]
-    assert set(shared) == {"openalex.topic", "figshare"}
+    assert set(shared) == {"openalex.topic", "figshare", "europepmc"}
     for prefix, body in shared.items():
         scheme = registry.scheme(prefix)
         assert (scheme.name, scheme.pattern, scheme.uri_format) == (body["name"], body["pattern"], body["uri_format"])

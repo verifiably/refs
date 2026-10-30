@@ -58,7 +58,7 @@ def test_no_quarry_prefix_is_refused():
 
 def test_local_schemes_are_in_the_dialect_and_new():
     schemes = tomllib.loads((REGISTRY / "local-schemes.toml").read_text(encoding="utf-8"))["schemes"]
-    assert set(schemes) == {"openalex.topic", "figshare"}
+    assert set(schemes) == {"openalex.topic", "figshare", "europepmc"}
     taken = {name.lower() for p, s in _prefixes().items() for name in (p, *s["synonyms"])}
     for prefix, scheme in schemes.items():
         assert prefix.lower() not in taken
