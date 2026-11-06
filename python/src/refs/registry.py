@@ -1,5 +1,5 @@
 """The pinned Bioregistry snapshot plus refs' shared local schemes and a profile's self-issued
-ones, with a fingerprint over the effective grammar (spec 5.3)."""
+ones, with a fingerprint over the effective grammar (docs/STANDARD.md §4)."""
 
 from __future__ import annotations
 

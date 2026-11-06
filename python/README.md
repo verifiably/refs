@@ -9,7 +9,7 @@ and runnable examples are in the repository README; the normative contract is
 
 ## Install
 
-Not published yet; take a path dependency on this directory. It depends on
+Not published to PyPI yet; take a path dependency on this directory. It depends on
 `verifiably-nodes` (the sibling `nodes` checkout's `python/`). `just setup` at the
 repository root installs it.
 

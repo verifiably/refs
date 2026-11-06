@@ -10,7 +10,7 @@ from refs import check_pattern, compile_pattern
 ROOT = Path(__file__).parents[2]
 REGISTRY = ROOT / "registry"
 
-# Prefixes quarry's catalog owns or names as facet namespaces; spec §5.2 forbids refusing them.
+# Prefixes quarry's catalog owns or names as facet namespaces; vendoring must not refuse them (docs/STANDARD.md §4.1, §4.7).
 QUARRY_PREFIXES = {"geo", "pubmed", "zenodo.record", "biostudies", "arrayexpress", "bioproject", "insdc.sra", "hgnc"}
 
 

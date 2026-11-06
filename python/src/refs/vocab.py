@@ -1,4 +1,4 @@
-"""Vocabulary declarations: a prefix whose ids are drawn from a released vocabulary (spec 5.4)."""
+"""Vocabulary declarations: a prefix whose ids are drawn from a released vocabulary (docs/STANDARD.md §5)."""
 
 from __future__ import annotations
 
@@ -71,7 +71,7 @@ def _parse_one(prefix: str, declaration: Any, registry: Registry) -> Vocabulary:
 
 
 def parse_vocabularies(table: Mapping[str, Any], registry: Registry) -> dict[str, Vocabulary]:
-    """The `[vocabularies]` table of spec 5.4, already parsed. Each key is the canonical prefix."""
+    """The `[vocabularies]` table of docs/STANDARD.md §5, already parsed. Each key is the canonical prefix."""
     return {prefix: _parse_one(prefix, declaration, registry) for prefix, declaration in table.items()}
 
 

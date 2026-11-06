@@ -1,4 +1,4 @@
-/** The pattern dialect: the grammar every stored identifier pattern is in (spec section 5.2).
+/** The pattern dialect: the grammar every stored identifier pattern is in (docs/STANDARD.md §2).
  *
  * The grammar is the authority, not either regex engine. `checkPattern` parses a pattern
  * against it and throws `unsupported_pattern` at the 0-based code-point index of the first

@@ -1,4 +1,4 @@
-/** Vocabulary declarations: a prefix whose ids are drawn from a released vocabulary (spec 5.4). */
+/** Vocabulary declarations: a prefix whose ids are drawn from a released vocabulary (docs/STANDARD.md §5). */
 
 import { RefsError } from "./errors.js";
 import { compareCodePoints } from "./order.js";
@@ -60,7 +60,7 @@ function parseOne(prefix: string, declaration: unknown, registry: Registry): Voc
   return Object.freeze({ prefix, issuer, release: current, accepted: Object.freeze(accepted) });
 }
 
-/** The `[vocabularies]` table of spec 5.4, already parsed. Each key is the canonical prefix. */
+/** The `[vocabularies]` table of docs/STANDARD.md §5, already parsed. Each key is the canonical prefix. */
 export function parseVocabularies(
   table: Readonly<Record<string, unknown>>,
   registry: Registry,

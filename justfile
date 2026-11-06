@@ -5,7 +5,7 @@
 # target names so the report can price the hooks. Fresh clone:
 # `git config core.hooksPath .githooks`.
 # Every recipe runs through the vendored timing wrapper tools/tt (source of truth: ops
-# bin/tt) so the run is recorded. Design: ops docs/specs/2026-09-04-test-ci-audit-design.md.
+# bin/tt) so the run is recorded. Reference: ops docs/tooling.md and docs/test-execution-policy.md.
 
 set quiet
 set positional-arguments

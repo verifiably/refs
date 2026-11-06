@@ -48,9 +48,8 @@ where `../nodes/python/pyproject.toml` is missing, then copies `registry/` into 
 
 ## Rules
 
-- Authority order: `docs/STANDARD.md`, then the code and its tests, then the dated design
-  records. When anything disagrees with the standard, it wins, or it has a bug: fix it in
-  the same change.
+- Authority order: `docs/STANDARD.md`, then the code and its tests. When anything
+  disagrees with the standard, it wins, or it has a bug: fix it in the same change.
 - Tier 1 is fixture-first: a change to the dialect, CURIE parsing, the registry format,
   lookup, collisions, the fingerprint, vocabularies or the facet starts as a row in
   `fixtures/` and a line in `docs/STANDARD.md`, then lands in Python and TypeScript in the

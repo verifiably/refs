@@ -143,7 +143,7 @@ def test_upstream_sampler_draws_matches():
 def test_rewrite_keeps_python_meaning_on_ascii():
     # For every rewritten registry pattern, the upstream pattern and its rewrite agree on
     # ASCII samples drawn from each side and printable ones at random: the only narrowing is
-    # non-ASCII (spec §5.2).
+    # non-ASCII (docs/STANDARD.md §4.7).
     prefixes = json.loads((REGISTRY / "bioregistry.json").read_text(encoding="utf-8"))["prefixes"]
     rewritten = {p: s for p, s in prefixes.items() if s["rules"]}
     assert rewritten

@@ -1,7 +1,7 @@
 """Vendoring-time rewriting of upstream patterns into the dialect, and sample generation.
 
 `rewrite` reads a pattern with a permissive reader of Python's regex syntax, limited to the
-constructs Bioregistry uses, and emits it in the dialect (spec section 5.2). It is a
+constructs Bioregistry uses, and emits it in the dialect (docs/STANDARD.md §2 and §4.7). It is a
 different grammar from `refs.dialect`'s strict one: it accepts what Python accepts and
 decides, construct by construct, whether the dialect can say the same thing. Every rule it
 applies keeps Python's meaning under full match, except the recorded ASCII narrowing of

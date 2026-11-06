@@ -16,9 +16,9 @@ Part of **verifiably**: verifiably builds understanding of the world from small,
 
 ## Install
 
-Not published yet. A consumer takes a path dependency on this checkout: `python/` is the
-distribution `verifiably-refs` (import `refs`), `ts/` is `@verifiably/refs`. Both depend on
-the sibling `nodes` checkout.
+Not published to PyPI or npm yet. A consumer takes a path dependency on a checkout of
+this repository: `python/` is the distribution `verifiably-refs` (import `refs`), `ts/`
+is `@verifiably/refs`. Both depend on the sibling `nodes` checkout.
 
 `just setup` links `../nodes` when the checkout is a git worktree, installs both
 packages and copies `registry/` into them. A fresh clone also runs
@@ -105,7 +105,15 @@ it holds no data about what an identifier means.
 |-------------|----------|
 | Resolving an identifier to a label, term, ancestors or record; fetching anything | quarry |
 | Checking that an identifier is a member of a held vocabulary | beliefs (its resolution) |
-| Joins and indexes across corpora | landscape, a later project above the profiles |
+| Joins and indexes across corpora | a corpus-joining layer above the profiles (not yet built) |
+
+### Consumers
+
+- **quarry** (Python): CURIE parsing, pattern checks and registry collision reporting
+  across its scientific resource catalog.
+- **lit** (Python): `refs/about` facet validation and payload construction on `paper`
+  nodes against declared vocabularies.
+- Intended consumers (not yet wired): **beliefs**, **science** and **mindful**.
 
 ## Layout
 
@@ -129,7 +137,3 @@ it holds no data about what an identifier means.
 ## License
 
 MIT, see [LICENSE](LICENSE).
-
-## Consumers
-
-None yet. Planned: quarry and lit.

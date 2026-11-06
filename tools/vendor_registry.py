@@ -1,4 +1,4 @@
-"""Vendor a Bioregistry snapshot into registry/ in the pattern dialect (spec section 5.2 and 5.3).
+"""Vendor a Bioregistry snapshot into registry/ in the pattern dialect (docs/STANDARD.md §2 and §4).
 
     vendor_registry.py --from-snapshot <bioregistry.json> --sha256 <hex>
 
@@ -29,7 +29,7 @@ FIXTURES = ROOT / "fixtures"
 
 # Inputs every pattern's verdicts are taken over, beside samples drawn from the pattern:
 # the empty id, non-ASCII digits and letters, a fullwidth form, a space, a carriage return,
-# a trailing newline, an astral digit and a lone hyphen (spec section 5.2).
+# a trailing newline, an astral digit and a lone hyphen (docs/STANDARD.md §2 and §4.7).
 ADVERSARIAL = ["", "١٢٣", "Ａ", " ", "a\rb", "123\n", "\U0001d7d9", "-"]
 
 

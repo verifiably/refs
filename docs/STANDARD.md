@@ -1,13 +1,18 @@
 # The refs Standard
 
-- **Spec version:** 1.0
-- **Status:** Living standard: the authoritative definition of the portable `refs` contract.
-- **Implementations:** Python (`python/src/refs/`), TypeScript (`ts/src/`).
+Type: standard; document types 1. This is version 1 of the portable `refs` standard
+for the Python (`python/src/refs/`) and TypeScript (`ts/src/`) implementations; the
+on-disk registry, vocabulary declaration and `refs/about` facet payload schemas it
+defines are currently unversioned. It specifies the pattern dialect, CURIE parsing,
+the pinned prefix registry, vocabulary declarations, the `refs/about` facet and the
+shared conformance fixtures. See [`README.md`](../README.md) for an overview and
+runnable examples, and [`python/README.md`](../python/README.md) and
+[`ts/README.md`](../ts/README.md) for the package guides.
 
 The key words MUST, MUST NOT, SHOULD, SHOULD NOT, and MAY are to be interpreted as
-described in RFC 2119. Where a dated design document disagrees with this standard, this
-standard wins. Where this standard and a fixture disagree, one of them has a bug: fix it
-in the same change.
+described in RFC 2119. Where any other document disagrees with this standard, this
+standard wins. Where this standard and a fixture disagree, one of them has a bug:
+fix it in the same change.
 
 ## 1. Scope and conformance
 
@@ -477,3 +482,11 @@ assert against them, and a tier 1 change lands with its fixtures first.
 Beyond the fixtures, the suites pin tier 1 rules with unit tests where a fixture row
 would not fit (the `issued_by` rule, `with_local` immutability and pattern check, the
 `SOURCES.toml` digests, the module boundary, a canonical prefix winning over a synonym).
+
+## Versions
+
+- **1 — 2026-10-29:** Initial portable standard across Python and TypeScript: the
+  pattern dialect (§2), CURIE parsing and canonicalisation (§3), the pinned
+  Bioregistry 0.15.3 snapshot and shared local schemes (`openalex.topic` and
+  `figshare`, plus `europepmc` added 2026-10-30) (§4), vocabulary declarations (§5),
+  the `refs/about` facet and invariant (§6), and the seven conformance fixtures (§7).

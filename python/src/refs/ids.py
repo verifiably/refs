@@ -1,4 +1,4 @@
-"""Identifiers as CURIEs: `prefix:local` with the registry's canonical prefix (spec 5.2)."""
+"""Identifiers as CURIEs: `prefix:local` with the registry's canonical prefix (docs/STANDARD.md §3)."""
 
 from __future__ import annotations
 

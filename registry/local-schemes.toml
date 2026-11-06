@@ -1,4 +1,4 @@
-# Shared external schemes for prefixes Bioregistry lacks (spec section 5.3). The default
+# Shared external schemes for prefixes Bioregistry lacks (docs/STANDARD.md §4.4). The default
 # registry includes them; each pattern is in the dialect, and each says why it exists.
 
 [schemes."openalex.topic"]

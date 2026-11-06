@@ -1,4 +1,4 @@
-/** The `refs/about` facet: a node's references, each with its own release (spec 5.5).
+/** The `refs/about` facet: a node's references, each with its own release (docs/STANDARD.md §6).
  *
  * The only refs module that imports nodes. */
 
