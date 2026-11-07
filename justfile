@@ -1,11 +1,10 @@
-# Front door for tests. Inner loop: `just test-one <runner args>` on the test at hand,
-# `just test-fast` (affected-only) before committing. Full suite: `just test`. Gates:
-# `just check` at pre-commit, `just gate` at pre-push. The git hooks in .githooks/ call
-# `hook-pre-commit` and `hook-pre-push`, which run the very same commands under their own
-# target names so the report can price the hooks. Fresh clone:
+# Front door for tests and checks. Focused work: `just test-one <runner args>`.
+# `check` and `gate` compose mandatory hygiene and separately timed broad targets.
+# Hooks time hygiene once, then invoke the same broad children. Full suite: `just test`;
+# deliberate full suite: `just test-full`. Install hooks with
 # `git config core.hooksPath .githooks`.
-# Every recipe runs through the vendored timing wrapper tools/tt (source of truth: ops
-# bin/tt) so the run is recorded. Reference: ops docs/tooling.md and docs/test-execution-policy.md.
+# Every measured recipe uses the vendored tools/tt (source of truth: ops bin/tt).
+# Reference: ops docs/tooling.md and docs/test-execution-policy.md.
 
 set quiet
 set positional-arguments
@@ -18,13 +17,13 @@ tt := "python3 tools/tt"
 # Avoid single quotes inside them.
 # `pytest` is bare on purpose: pyproject's addopts already carries `-q`, and a second
 # `-q` is `-qq`, which drops the summary line the wrapper counts tests from.
-py_fast_cmd := "(cd python && uv run --frozen pytest --testmon)"
-py_test_cmd := "(cd python && uv run --frozen pytest)"
+py_fast_cmd := "(cd python && uv run --frozen pytest --testmon --junitxml=\"${TT_JUNIT_DIR:?run through tt}/pytest.xml\")"
+py_test_cmd := "(cd python && uv run --frozen pytest --junitxml=\"${TT_JUNIT_DIR:?run through tt}/pytest.xml\")"
 py_check_cmd := "(cd python && uv run --frozen ruff check . && uv run --frozen pyright src)"
 py_setup_cmd := "(cd python && uv sync --frozen)"
 
 ts_fast_cmd := "(cd ts && npm test -- --changed --passWithNoTests)"
-ts_test_cmd := "(cd ts && npm test)"
+ts_test_cmd := "(cd ts && npm test -- --reporter=default --reporter=junit --outputFile.junit=\"${TT_JUNIT_DIR:?run through tt}/vitest.xml\")"
 ts_check_cmd := "(cd ts && npm run typecheck && npm run check)"
 ts_setup_cmd := "(cd ts && npm ci)"
 
@@ -38,7 +37,6 @@ data_paths := "fixtures registry"
 fast_cmd := "changed=$(git status --porcelain -- " + data_paths + ") || exit 1; if [ -n \"$changed\" ]; then echo \"test-fast: uncommitted change under " + data_paths + "; running the full suite\" >&2; " + test_cmd + "; else " + py_fast_cmd + " && " + ts_fast_cmd + "; fi"
 test_cmd := py_test_cmd + " && " + ts_test_cmd
 one_cmd := "if [ \"$1\" = ts ]; then shift; (cd ts && npx --no-install vitest run \"$@\"); else (cd python && uv run --frozen pytest \"$@\"); fi"
-check_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && " + registry_check_cmd + " && " + py_check_cmd + " && " + ts_check_cmd + " && tasks check"
 
 # registry/ is the one copy of the vendored registry; each package carries a gitignored copy
 # (python/src/refs/data/, ts/data/) that `registry-sync` writes and `registry-check` compares
@@ -52,6 +50,18 @@ registry_check_cmd := "(want=$(cd registry && sha256sum -- *); for d in " + regi
 # dependencies (../nodes) resolve against the physical checkout dir. In a task worktree
 # that dir is under WORK_ROOT, so link the main checkout's sibling there. Idempotent.
 setup_cmd := "common=\"$(git rev-parse --git-common-dir)\"; if [ \"$common\" != \".git\" ]; then main=\"$(cd \"$common/..\" && pwd -P)\"; target=\"$main/../nodes\"; link=\"../nodes\"; if [ -L \"$link\" ] && [ \"$(readlink \"$link\")\" = \"$target\" ]; then :; elif [ -e \"$link\" ]; then echo \"setup: $link exists and is not a link to $target\" >&2; exit 1; else ln -s \"$target\" \"$link\"; fi; fi; test -f ../nodes/python/pyproject.toml || { echo \"setup: ../nodes/python/pyproject.toml not found; clone nodes beside this checkout\" >&2; exit 1; }"
+
+# Broad policy and hosted evidence interfaces. Keep CI ref coverage undeclared until activation.
+check_hygiene_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && " + registry_check_cmd + " && tasks check"
+check_code_cmd := py_check_cmd + " && " + ts_check_cmd
+docs_paths := "*.md docs/*"
+docs_check_cmd := check_hygiene_cmd
+ci_suite_refs := ""
+ci_remote := "origin"
+ci_evidence_cmd := "case \"${REFS_CI_EVIDENCE_DIR:-}\" in \"\") echo \"set REFS_CI_EVIDENCE_DIR\" >&2; exit 2;; /*) ;; *) echo \"CI evidence path must be absolute\" >&2; exit 2;; esac"
+ci_hygiene_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && " + registry_check_cmd
+ci_py_test_cmd := "(cd python && uv run --frozen pytest --junitxml=\"$REFS_CI_EVIDENCE_DIR/pytest.xml\")"
+ci_ts_test_cmd := "(cd ts && npm test -- --reporter=default --reporter=junit --outputFile.junit=\"$REFS_CI_EVIDENCE_DIR/vitest.xml\")"
 
 # Affected-only: the inner loop. An empty selection is a result, not a failure.
 test-fast:
@@ -68,11 +78,14 @@ test-one +args:
 test:
     {{tt}} test -- sh -c '{{test_cmd}}'
 
-# Seconds, not minutes: lint, typecheck, and the task-record check.
+# Compose mandatory hygiene and policy-controlled static checks.
 check:
-    {{tt}} check -- sh -c '{{check_cmd}}'
+    just check-hygiene
+    just check-code
 
-gate: check test
+gate:
+    just check
+    just test
 
 # Render the generated regions of README.md and AGENTS.md from identity.toml. The only
 # thing that edits those regions; `check` refuses a commit while they are out of date.
@@ -97,19 +110,39 @@ registry-sync:
 registry-check:
     {{tt}} registry-check -- sh -c '{{registry_check_cmd}}'
 
-# What the pre-commit hook runs: `check`'s command under its own hook target.
+# Time only mandatory hygiene under the hook target; broad children decide policy separately.
 hook-pre-commit:
-    {{tt}} hook-pre-commit -- sh -c '{{check_cmd}}'
+    {{tt}} hook-pre-commit -- sh -c '{{check_hygiene_cmd}}'
+    just check-code
 
-# What the pre-push hook runs: the same commands as `gate`, under one hook target.
+# The uncovered-push route composes the same checks and full suite as `gate`.
 hook-pre-push:
-    {{tt}} hook-pre-push -- sh -c '{{check_cmd}} && {{test_cmd}}'
+    {{tt}} hook-pre-push -- sh -c '{{check_hygiene_cmd}}'
+    just check-code
+    just test
 
 # CI keeps its two-job matrix once the packages land; each job runs the recipe for its
 # package, so the whole job is one recorded number. `tasks check` is not in them: the
 # `tasks` binary is not installed on a runner.
 ci-python:
-    {{tt}} ci-python -- sh -c '{{py_test_cmd}} && {{py_check_cmd}}'
+    {{tt}} ci-python -- sh -c '{{ci_evidence_cmd}} && {{ci_py_test_cmd}} && {{ci_hygiene_cmd}} && {{py_check_cmd}}'
 
 ci-typescript:
-    {{tt}} ci-typescript -- sh -c '{{ts_test_cmd}} && {{ts_check_cmd}}'
+    {{tt}} ci-typescript -- sh -c '{{ci_evidence_cmd}} && {{ci_ts_test_cmd}} && {{ci_hygiene_cmd}} && {{ts_check_cmd}}'
+
+test-full:
+    TT_FORCE=1 just test
+
+check-hygiene:
+    {{tt}} check-hygiene -- sh -c '{{check_hygiene_cmd}}'
+
+check-code:
+    {{tt}} check-code -- sh -c '{{check_code_cmd}}'
+
+hook-pre-commit-docs:
+    {{tt}} hook-pre-commit-docs -- sh -c '{{docs_check_cmd}}'
+
+hook-pre-push-fast:
+    {{tt}} hook-pre-push-fast -- sh -c '{{check_hygiene_cmd}}'
+    just check-code
+    just test-fast
