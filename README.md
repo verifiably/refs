@@ -22,9 +22,12 @@ is `@verifiably/refs`. Both depend on the sibling `nodes` checkout.
 
 `just setup` links `../nodes` when the checkout is a git worktree, installs both
 packages and copies `registry/` into them. A fresh clone also runs
-`git config core.hooksPath .githooks`. `just check` runs `just check-hygiene` then
-`just check-code`; `just test` runs both suites (`just test-full` forces a full local
-run via `TT_FORCE=1 just test`); and `just gate` runs `just check` then `just test`.
+`git config core.hooksPath .githooks`. Checkout-local `.tt.toml` disables automatic
+broad checks (`just check-code`, `just test-fast`, `just test`) so local `just check` and `just gate`
+run `just check-hygiene` and skip broad targets while GitHub Actions
+(`.github/workflows/ci.yml`) runs both suites and static checks on every branch push.
+Use `just test-full` (`TT_FORCE=1 just test`), `TT_FORCE=1 just gate`, or
+`TT_FORCE=1 just check` for explicit forced local verification.
 
 ## Usage
 

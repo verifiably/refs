@@ -20,20 +20,23 @@ where `../nodes/python/pyproject.toml` is missing, then copies `registry/` into 
 
 - `just test-one <args>`: pytest in `python/`, so paths are relative to it
   (`just test-one tests/test_dialect.py`); with `ts` first, vitest in `ts/`
-  (`just test-one ts tests/dialect.test.ts`).
+  (`just test-one ts tests/dialect.test.ts`). Never skipped by `.tt.toml`.
 - `just test-fast`: affected-only (pytest-testmon, then `vitest --changed`), except that
   an uncommitted change under `fixtures/` or `registry/` runs the full suite, since neither
   selector follows the data files tests read. `just test`: the full suite, both languages
   (the TypeScript run builds the package first). `just test-full` (`TT_FORCE=1 just test`)
   forces the full local suite.
-- `just check-hygiene`: `ops-check`, `ops-docs check`, `registry-check`, and `tasks check`.
-  `just check-code`: ruff and pyright on `python/`, `tsc` and biome on `ts/`. `just check`
-  runs `just check-hygiene` then `just check-code`, and `just gate` runs `just check` then
-  `just test`.
-- `.github/workflows/ci.yml` runs `just ci-python` and `just ci-typescript` on GitHub
-  Actions. The hooks in `.githooks/` time mandatory hygiene under `hook-pre-commit`,
-  `hook-pre-commit-docs`, `hook-pre-push`, and `hook-pre-push-fast` and invoke broad
-  targets through `tools/tt`; do not call a test runner directly.
+- `just check-hygiene`: `ops-check`, `ops-docs check`, `registry-check`, and `tasks check`
+  (always runs). `just check-code`: ruff and pyright on `python/`, `tsc` and biome on `ts/`.
+  `just check` runs `just check-hygiene` then `just check-code`, and `just gate` runs
+  `just check` then `just test`.
+- Checkout-local `.tt.toml` (`automatic_broad = false`) governs `test`, `test-fast`,
+  `check-code`, `ci-python`, and `ci-typescript`. Local hooks in `.githooks/` time mandatory
+  hygiene (`hook-pre-commit`, `hook-pre-commit-docs`, `hook-pre-push`, `hook-pre-push-fast`)
+  while skipping broad targets locally and enforcing `just ci-python` and `just ci-typescript`
+  in `.github/workflows/ci.yml` on every branch push to `origin`. Use `just test-full`,
+  `TT_FORCE=1 just gate`, or `TT_FORCE=1 just check` for deliberate local broad runs. Every
+  recipe runs through `tools/tt`; do not call a test runner directly.
 
 ## Layout
 
