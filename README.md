@@ -22,8 +22,9 @@ is `@verifiably/refs`. Both depend on the sibling `nodes` checkout.
 
 `just setup` links `../nodes` when the checkout is a git worktree, installs both
 packages and copies `registry/` into them. A fresh clone also runs
-`git config core.hooksPath .githooks`. `just gate` is the whole check: `just check`, then
-`just test` for both suites.
+`git config core.hooksPath .githooks`. `just check` runs `just check-hygiene` then
+`just check-code`; `just test` runs both suites (`just test-full` forces a full local
+run via `TT_FORCE=1 just test`); and `just gate` runs `just check` then `just test`.
 
 ## Usage
 

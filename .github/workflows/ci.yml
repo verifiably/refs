@@ -1,0 +1,180 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: refs-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    timeout-minutes: 15
+    env:
+      TT_FORCE: "1"
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
+    defaults:
+      run:
+        working-directory: refs
+    steps:
+      - name: Check out refs
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          path: refs
+      - name: Check out sibling nodes
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: verifiably/nodes
+          path: nodes
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "0.11.29"
+          python-version: ${{ matrix.python-version }}
+          cache-dependency-glob: "refs/python/uv.lock"
+      - name: Set up just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+      - name: Prepare coverage evidence
+        run: |
+          evidence_dir="$RUNNER_TEMP/refs-python-coverage"
+          rm -rf "$evidence_dir"
+          mkdir -p "$evidence_dir"
+          echo "REFS_CI_EVIDENCE_DIR=$evidence_dir" >> "$GITHUB_ENV"
+          {
+            printf 'refs %s\n' "$(git rev-parse HEAD)"
+            printf 'nodes %s\n' "$(git -C "$GITHUB_WORKSPACE/nodes" rev-parse HEAD)"
+            git ls-files -- python/tests fixtures registry
+            cat python/pyproject.toml
+          } > "$evidence_dir/module-inventory.txt"
+      - name: Populate package registry copies
+        run: just registry-sync
+      - name: Install Python dependencies
+        run: (cd python && uv sync --frozen)
+      - name: Run Python suite, portable hygiene, and static checks
+        run: just ci-python
+      - name: Require coverage evidence
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, xml.etree.ElementTree as ET
+          root = pathlib.Path(os.environ["REFS_CI_EVIDENCE_DIR"])
+          inventory = root / "module-inventory.txt"
+          if not inventory.is_file() or not inventory.read_text(encoding="utf-8").strip():
+              raise SystemExit(f"missing or empty module inventory: {inventory}")
+          report = root / "pytest.xml"
+          if not report.is_file():
+              raise SystemExit(f"missing JUnit report: {report}")
+          suites = ET.parse(report).getroot()
+          nodes = [suites] if suites.tag == "testsuite" else list(suites.findall("testsuite"))
+          tests = sum(int(node.attrib.get("tests", "0")) for node in nodes)
+          skipped = sum(int(node.attrib.get("skipped", "0")) for node in nodes)
+          failures = sum(int(node.attrib.get("failures", "0")) for node in nodes)
+          errors = sum(int(node.attrib.get("errors", "0")) for node in nodes)
+          executed = tests - skipped
+          print(f"JUnit summary: tests={tests} executed={executed} skipped={skipped} failures={failures} errors={errors}")
+          if executed <= 0 or skipped != 0 or failures > 0 or errors > 0:
+              raise SystemExit("unacceptable JUnit summary")
+          PY
+      - name: Upload coverage evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: python-${{ matrix.python-version }}-coverage
+          path: ${{ env.REFS_CI_EVIDENCE_DIR }}
+          retention-days: 30
+          if-no-files-found: error
+
+  typescript:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    timeout-minutes: 15
+    env:
+      TT_FORCE: "1"
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20", "24"]
+    defaults:
+      run:
+        working-directory: refs
+    steps:
+      - name: Check out refs
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          path: refs
+      - name: Check out sibling nodes
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: verifiably/nodes
+          path: nodes
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: refs/ts/package-lock.json
+      - name: Set up just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+      - name: Prepare coverage evidence
+        run: |
+          evidence_dir="$RUNNER_TEMP/refs-typescript-coverage"
+          rm -rf "$evidence_dir"
+          mkdir -p "$evidence_dir"
+          echo "REFS_CI_EVIDENCE_DIR=$evidence_dir" >> "$GITHUB_ENV"
+          {
+            printf 'refs %s\n' "$(git rev-parse HEAD)"
+            printf 'nodes %s\n' "$(git -C "$GITHUB_WORKSPACE/nodes" rev-parse HEAD)"
+            git ls-files -- ts/tests fixtures registry
+            cat ts/package.json
+          } > "$evidence_dir/module-inventory.txt"
+      - name: Build sibling nodes TypeScript package
+        working-directory: ${{ github.workspace }}/nodes/ts
+        run: npm ci && npm run build
+      - name: Populate package registry copies
+        run: just registry-sync
+      - name: Install TypeScript dependencies
+        run: (cd ts && npm ci)
+      - name: Run TypeScript suite, portable hygiene, and static checks
+        run: just ci-typescript
+      - name: Require coverage evidence
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, xml.etree.ElementTree as ET
+          root = pathlib.Path(os.environ["REFS_CI_EVIDENCE_DIR"])
+          inventory = root / "module-inventory.txt"
+          if not inventory.is_file() or not inventory.read_text(encoding="utf-8").strip():
+              raise SystemExit(f"missing or empty module inventory: {inventory}")
+          report = root / "vitest.xml"
+          if not report.is_file():
+              raise SystemExit(f"missing JUnit report: {report}")
+          suites = ET.parse(report).getroot()
+          nodes = [suites] if suites.tag == "testsuite" else list(suites.findall("testsuite"))
+          tests = sum(int(node.attrib.get("tests", "0")) for node in nodes)
+          skipped = sum(int(node.attrib.get("skipped", "0")) for node in nodes)
+          failures = sum(int(node.attrib.get("failures", "0")) for node in nodes)
+          errors = sum(int(node.attrib.get("errors", "0")) for node in nodes)
+          executed = tests - skipped
+          print(f"JUnit summary: tests={tests} executed={executed} skipped={skipped} failures={failures} errors={errors}")
+          if executed <= 0 or skipped != 0 or failures > 0 or errors > 0:
+              raise SystemExit("unacceptable JUnit summary")
+          PY
+      - name: Upload coverage evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: typescript-${{ matrix.node-version }}-coverage
+          path: ${{ env.REFS_CI_EVIDENCE_DIR }}
+          retention-days: 30
+          if-no-files-found: error

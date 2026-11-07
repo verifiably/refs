@@ -825,3 +825,188 @@ def test_pre_push_clears_git_local_environment(front_door: FrontDoor) -> None:
         (front_door.repo / "child_git_env.json").read_text(encoding="utf-8")
     )
     assert leaked == []
+
+
+def test_ci_workflow_conformance() -> None:
+    workflow_path = REPO / ".github" / "workflows" / "ci.yml"
+    assert workflow_path.is_file(), "missing .github/workflows/ci.yml"
+    text = workflow_path.read_text(encoding="utf-8")
+
+    assert 'branches: ["**"]' in text
+    assert "pull_request:" in text
+    assert "workflow_dispatch:" in text
+    assert (
+        "if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository"
+        in text
+    )
+    assert "group: refs-ci-${{ github.workflow }}-${{ github.ref }}" in text
+    assert "cancel-in-progress: true" in text
+    assert "contents: read" in text
+    assert "timeout-minutes: 15" in text
+    assert 'TT_FORCE: "1"' in text
+    assert "working-directory: refs" in text
+
+    uses_lines = re.findall(r"(?m)^\s*(?:-\s*)?uses:\s*(\S+)[ \t]*(?:#.*)?$", text)
+    assert uses_lines, "no uses: lines found in workflow"
+    for ref in uses_lines:
+        assert re.fullmatch(r"[^@]+@[0-9a-f]{40}", ref), f"unpinned action ref: {ref}"
+    assert "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0" in uses_lines
+    assert "astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990" in uses_lines
+    assert "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020" in uses_lines
+    assert "extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3" in uses_lines
+    assert "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" in uses_lines
+    assert "setup-python" not in text
+    assert 'version: "0.11.29"' in text
+    assert 'python-version: ["3.11", "3.13"]' in text
+    assert 'node-version: ["20", "24"]' in text
+
+    assert "path: refs" in text
+    assert "repository: verifiably/nodes" in text
+    assert "path: nodes" in text
+    assert "just registry-sync" in text
+    assert "npm ci && npm run build" in text
+    assert "just ci-python" in text
+    assert "just ci-typescript" in text
+    assert "python-${{ matrix.python-version }}-coverage" in text
+    assert "typescript-${{ matrix.node-version }}-coverage" in text
+    assert "retention-days: 30" in text
+    assert "if-no-files-found: error" in text
+    assert "executed <= 0" in text
+    assert "skipped != 0" in text
+
+
+def assert_policy_and_ci_suite_refs_contract(
+    root: Path,
+    *,
+    env: dict[str, str] | None = None,
+) -> None:
+    tt = load_tt_module(REPO / "tools" / "tt")
+    if env is not None:
+        tt._git_env = lambda: {**env, "GIT_OPTIONAL_LOCKS": "0"}
+    policy = tt.read_policy(root)
+    justfile = root / "justfile"
+    ci_suite_refs = subprocess.run(
+        ["just", "--justfile", str(justfile), "--evaluate", "ci_suite_refs"],
+        cwd=root,
+        env=env,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    ci_remote = subprocess.run(
+        ["just", "--justfile", str(justfile), "--evaluate", "ci_remote"],
+        cwd=root,
+        env=env,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    assert ci_remote == "origin"
+
+    expected_broad = [
+        "test",
+        "test-fast",
+        "check-code",
+        "ci-python",
+        "ci-typescript",
+    ]
+    if policy is None:
+        assert ci_suite_refs == "", (
+            "ci_suite_refs must be empty while .tt.toml is absent"
+        )
+    elif policy["automatic_broad"] is False:
+        assert policy["broad_targets"] == expected_broad
+        assert ci_suite_refs == "refs/heads/*"
+        wf = root / ".github" / "workflows" / "ci.yml"
+        assert wf.is_file(), "policy-off requires .github/workflows/ci.yml"
+        wf_text = wf.read_text(encoding="utf-8")
+        assert "just ci-python" in wf_text
+        assert "just ci-typescript" in wf_text
+        assert 'TT_FORCE: "1"' in wf_text
+    else:
+        assert policy["automatic_broad"] is True
+        assert policy["broad_targets"] == expected_broad
+        assert ci_suite_refs in {"", "refs/heads/*"}
+        if ci_suite_refs == "refs/heads/*":
+            wf = root / ".github" / "workflows" / "ci.yml"
+            assert wf.is_file(), "Mode B rollback requires .github/workflows/ci.yml"
+
+
+def test_live_repository_policy_and_ci_suite_refs_contract(
+    front_door: FrontDoor,
+) -> None:
+    assert_policy_and_ci_suite_refs_contract(REPO, env=front_door.env)
+
+    # Stage 1 / Rollback Mode A without .tt.toml (policy=None, ci_suite_refs="")
+    (front_door.repo / ".tt.toml").unlink(missing_ok=True)
+    front_door.install_justfile(ci_suite_refs="")
+    assert_policy_and_ci_suite_refs_contract(front_door.repo, env=front_door.env)
+
+    # Rollback Mode A with .tt.toml (automatic_broad=True, ci_suite_refs="")
+    front_door.write_policy(automatic_broad=True)
+    front_door.install_justfile(ci_suite_refs="")
+    assert_policy_and_ci_suite_refs_contract(front_door.repo, env=front_door.env)
+
+    # Half-configured states must fail AssertionError
+    front_door.write_policy(automatic_broad=False)
+    front_door.install_justfile(ci_suite_refs="")
+    with pytest.raises(AssertionError):
+        assert_policy_and_ci_suite_refs_contract(front_door.repo, env=front_door.env)
+
+    (front_door.repo / ".tt.toml").unlink(missing_ok=True)
+    front_door.install_justfile(ci_suite_refs="refs/heads/*")
+    with pytest.raises(AssertionError):
+        assert_policy_and_ci_suite_refs_contract(front_door.repo, env=front_door.env)
+
+    # Activated Stage 2 state and Rollback Mode B state (with workflow present)
+    wf_dst = front_door.repo / ".github" / "workflows" / "ci.yml"
+    wf_dst.parent.mkdir(parents=True, exist_ok=True)
+    wf_dst.write_text(
+        'TT_FORCE: "1"\nrun: just ci-python\nrun: just ci-typescript\n',
+        encoding="utf-8",
+    )
+    front_door.write_policy(automatic_broad=False)
+    front_door.install_justfile(ci_suite_refs="refs/heads/*")
+    assert_policy_and_ci_suite_refs_contract(front_door.repo, env=front_door.env)
+
+    front_door.write_policy(automatic_broad=True)
+    front_door.install_justfile(ci_suite_refs="refs/heads/*")
+    assert_policy_and_ci_suite_refs_contract(front_door.repo, env=front_door.env)
+
+
+def test_guides_and_portable_hygiene_conformance(front_door: FrontDoor) -> None:
+    readme = (REPO / "README.md").read_text(encoding="utf-8")
+    install_h2 = readme.find("## Install")
+    usage_h2 = readme.find("## Usage")
+    assert 0 <= install_h2 < usage_h2
+    install_region = readme[install_h2:usage_h2]
+    for token in ("just check-hygiene", "just check-code", "just test-full"):
+        assert token in install_region
+
+    agents = (REPO / "AGENTS.md").read_text(encoding="utf-8")
+    gates_h2 = agents.find("## Gates")
+    layout_h2 = agents.find("## Layout")
+    assert 0 <= gates_h2 < layout_h2
+    gates_region = agents[gates_h2:layout_h2]
+    for token in (
+        "just test-full",
+        "just check-hygiene",
+        "just check-code",
+        "just ci-python",
+        "just ci-typescript",
+    ):
+        assert token in gates_region
+
+    for cmd in (
+        ["python3", "tools/ops-check"],
+        ["python3", "tools/ops-docs", "check"],
+    ):
+        res = subprocess.run(
+            cmd,
+            cwd=REPO,
+            env=front_door.env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert res.returncode == 0, res.stdout + res.stderr
